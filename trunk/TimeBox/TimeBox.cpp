@@ -33,18 +33,52 @@
 	\note	All parameters up to and including flags are passed to the
 			BControl constructor "as is", without changes.
 */
-TimeBox::TimeBox(BRect rectIn,
+TimeBox::TimeBox(BRect frame,
 				const char* name,
 				const char* label,
-				BMessage* message = NULL,
-				uint32 resizingMode = B_FOLLOW_LEFT | B_FOLLOW_TOP,
-				uint32 flags = B_WILL_DRAW | B_NAVIGABLE | 
-					B_FULL_UPDATE_ON_RESIZE | B_NAVIGABLE_JUMP,
-				bool embedCheckBox = false,
-				const char* checkBoxLabel = NULL,
-				bool isCheckBoxChecked = false))
+				BMessage* message,
+				uint32 resizingMode,
+				uint32 flags,
+				bool embedCheckBox,
+				const char* checkBoxLabel,
+				bool isCheckBoxChecked))
+	: BControl (frame, name, NULL, message, resizingMode, flags)
 {
-	
+		
 
 }
 // <-- end of TimeBox constructor
+
+//! Function that creates and fills the menu with hours
+/*! \brief Function that initializes the hours menu. 
+  
+	\note The deriving classes should re-implement it.
+*/
+BMenu* TimeBox::BuildHoursMenu(void) 
+{
+	BMenu *toReturn = new BMenu("hoursMenu");
+	BMenuItem *toAdd = NULL;
+	BMessage* hourMessage = NULL;
+	char label[8] = "hour_  ";
+	
+	if (NULL == toReturn) {
+		// Error reporting
+	}
+	for (int i=0; i <= 23; i++) {
+		sprintf(label, "hour_%02d", i);
+		hourMessage = new BMessage(HOUR_CHANGED);
+		if (NULL == hourMessage) {
+			// Error reporting
+		}	
+		hourMessage->AddInt8("value", i);
+		toAdd = new BMenuItem(label, hourMessage);		
+		if (NULL == toAdd) {
+			// Error reporting
+		}	
+		toReturn->AddItem(toAdd);
+	}
+	// <-- end of loop on hour values 0 - 23
+	
+	return toReturn;
+}
+// <-- end of function TimeBox::BuildHoursMenu(int)

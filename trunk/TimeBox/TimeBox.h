@@ -12,6 +12,9 @@
 
 #include <InterfaceKit.h>
 
+#define HOUR_CHANGED	0xA000
+#define MIN_CHANGED		0xA001
+
 /*!	\struct		TimeRepresentation
 	\brief		A simple representation of hours and minutes.
 	\note		Note that the hours and minutes may be negative!
@@ -30,23 +33,23 @@ typedef struct _timeRep {
 class TimeBox : public BControl 
 {
 	protected:
-		int hours;
-		int minutes;
-		char* label;
+		int fHours;
+		int fMinutes;
+		char* fLabel;
 		
-		BLabel* label;
-		BMenuBar *menubar;
-		BMenu *hoursMenu;
-		BMenu *minutesMenu;
+		BLabel* fLabel;
+		BMenuBar *fMenubar;
+		BMenu *fHoursMenu;
+		BMenu *fMinutesMenu;
 		
 		virtual void BuildHoursMenu();
 		virtual void BuildMinutesMenu();
 		
 	public:
-		TimeBox(BRect rectIn,
+		TimeBox(BRect frame,
 				const char* name,
 				const char* label,
-				BMessage* message,
+				BMessage* message = NULL,
 				uint32 resizingMode = B_FOLLOW_LEFT | B_FOLLOW_TOP,
 				uint32 flags = B_WILL_DRAW | B_NAVIGABLE | 
 					B_FULL_UPDATE_ON_RESIZE | B_NAVIGABLE_JUMP,
@@ -61,24 +64,27 @@ class TimeBox : public BControl
 		virtual void SetValue(int32 valueIn);	// hours are first 16 bits,
 												// minutes are last 16 bits.
 		// Class-specific time setters
-		virtual bool SetTime(time_t timeIn);
-		virtual bool SetTime(TimeRepresentation timeIn);
+		virtual bool SetTime(time_t time);
+		virtual bool SetTime(TimeRepresentation time);
 		virtual TimeRepresentation GetTime();
 
 		// Enabled / Disabled functionality
 		virtual bool IsEnabled();
-		virtual void SetEnabled(bool stateIn);
+		virtual void SetEnabled(bool state);
 		// Enabled / Disabled functionality of the embedded checkbox
 		virtual bool IsCheckBoxEnabled();
-		virtual void SetCheckBoxEnabled(bool stateIn);
+		virtual void SetCheckBoxEnabled(bool state);
 		
 		// Label manipulation. Note: standard BControl's label manipulation
 		// works only on control's label; manipulation of the embedded 
 		// checkbox label is performed through additional API.
-		virtual void SetLabel(const char* labelIn);
-		const char* Label() const;
-		virtual void SetCheckBoxLabel(const char* labelIn);
-		const char* CheckBoxLabel() const;
+		virtual void SetLabel(const char* label);
+		virtual const char* Label() const;
+		virtual void SetCheckBoxLabel(const char* label);
+		virtual const char* CheckBoxLabel() const;
+		
+		// Functions required for correct functionality of the control
+		virtual void Draw(BRect updateRect);		
 };
 // <-- end of class BControl
 
