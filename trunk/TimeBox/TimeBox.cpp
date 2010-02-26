@@ -65,7 +65,7 @@ BMenu* TimeBox::BuildHoursMenu(void)
 		// Error reporting
 	}
 	for (int i=0; i <= 23; i++) {
-		sprintf(label, "hour_%02d", i);
+		sprintf(label, "%02d", i);
 		hourMessage = new BMessage(HOUR_CHANGED);
 		if (NULL == hourMessage) {
 			// Error reporting
@@ -82,3 +82,43 @@ BMenu* TimeBox::BuildHoursMenu(void)
 	return toReturn;
 }
 // <-- end of function TimeBox::BuildHoursMenu(int)
+
+//! Function that creates and fills the minutes menu
+/*! \brief Function that initializes the minutes menu.
+	\note The deriving classes should re-implement it.
+*/
+BMenu* TimeBox::BuildMinutesMenu(void)
+{
+	BMenu *toReturn = new BMenu("minutesMenu");
+	BMenuItem *toAdd = NULL;
+	BMessage* minuteMessage = NULL;
+	char label[7] = "min_  ";
+	
+	if (NULL == toReturn) {
+		ErrorAlert *ex = 
+			new ErrorAlert("Not enough memory to create menu for minutes!", true);
+	}
+	// The step of minutes is 5
+	for (int i = 0; i <= 55; i+=5) {
+		sprintf(label, "%02d", i);
+		minuteMessage = new BMessage(MINUTE_CHANGED);
+		if (NULL == minuteMessage) {
+			ErrorAlert *ex = 
+				new ErrorAlert("Not enough memory to create minute change message!",
+								true);
+		}
+		minuteMessage->AddInt8("value", i);
+		toAdd = new BMenuItem(label, minuteMessage);
+		if (NULL == toAdd) {
+			ErrorAlert *ex = 
+				new ErrorAlert("Not enough memory to create menu item for minutes!",
+								true);
+		}
+		toReturn->AddItem(toAdd);
+	}
+	// <-- end of loop on minutes 0 - 55 with step of 5
+	
+	return toReturn;
+}
+// <-- end of function TimeBox::BuildMinutesMenu(void)
+	

@@ -11,6 +11,7 @@
 */
 
 #include <InterfaceKit.h>
+#include "../globals.h"
 
 #define HOUR_CHANGED	0xA000
 #define MIN_CHANGED		0xA001
