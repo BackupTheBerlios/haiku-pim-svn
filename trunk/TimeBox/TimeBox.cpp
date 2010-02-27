@@ -51,50 +51,60 @@ TimeBox::TimeBox(BRect frame,
 
 //! Function that creates and fills the menu with hours
 /*! \brief Function that initializes the hours menu. 
-  
-	\note The deriving classes should re-implement it.
+  	\note The deriving classes should re-implement it.
+  	\return The menu to be added to the control.
 */
 BMenu* TimeBox::BuildHoursMenu(void) 
 {
 	BMenu *toReturn = new BMenu("hoursMenu");
 	BMenuItem *toAdd = NULL;
 	BMessage* hourMessage = NULL;
-	char label[8] = "hour_  ";
+	char label[3] = "  ";
 	
 	if (NULL == toReturn) {
-		// Error reporting
+		exitValue = NOT_ENOUGH_MEMORY;
+		ErrorAlert *ex = 
+			new ErrorAlert("Not enough memory to create menu for hours!", true);
 	}
 	for (int i=0; i <= 23; i++) {
 		sprintf(label, "%02d", i);
 		hourMessage = new BMessage(HOUR_CHANGED);
 		if (NULL == hourMessage) {
-			// Error reporting
+			exitValue = NOT_ENOUGH_MEMORY;
+			ErrorAlert *ex = 
+				new ErrorAlert("Not enough memory to create message for hours!",
+					true);
 		}	
 		hourMessage->AddInt8("value", i);
 		toAdd = new BMenuItem(label, hourMessage);		
 		if (NULL == toAdd) {
-			// Error reporting
+			exitValue = NOT_ENOUGH_MEMORY;
+			ErrorAlert *ex = 
+				new ErrorAlert("Not enough memory to create menuitem for hours!",
+					true);
 		}	
 		toReturn->AddItem(toAdd);
 	}
 	// <-- end of loop on hour values 0 - 23
 	
-	return toReturn;
+	return(toReturn);
 }
 // <-- end of function TimeBox::BuildHoursMenu(int)
 
 //! Function that creates and fills the minutes menu
 /*! \brief Function that initializes the minutes menu.
 	\note The deriving classes should re-implement it.
+	\return The menu to be added to the control.
 */
 BMenu* TimeBox::BuildMinutesMenu(void)
 {
 	BMenu *toReturn = new BMenu("minutesMenu");
 	BMenuItem *toAdd = NULL;
 	BMessage* minuteMessage = NULL;
-	char label[7] = "min_  ";
+	char label[3] = "  ";
 	
 	if (NULL == toReturn) {
+		exitValue = NOT_ENOUGH_MEMORY;
 		ErrorAlert *ex = 
 			new ErrorAlert("Not enough memory to create menu for minutes!", true);
 	}
@@ -103,6 +113,7 @@ BMenu* TimeBox::BuildMinutesMenu(void)
 		sprintf(label, "%02d", i);
 		minuteMessage = new BMessage(MINUTE_CHANGED);
 		if (NULL == minuteMessage) {
+			exitValue = NOT_ENOUGH_MEMORY;
 			ErrorAlert *ex = 
 				new ErrorAlert("Not enough memory to create minute change message!",
 								true);
@@ -110,6 +121,7 @@ BMenu* TimeBox::BuildMinutesMenu(void)
 		minuteMessage->AddInt8("value", i);
 		toAdd = new BMenuItem(label, minuteMessage);
 		if (NULL == toAdd) {
+			exitValue = NOT_ENOUGH_MEMORY;
 			ErrorAlert *ex = 
 				new ErrorAlert("Not enough memory to create menu item for minutes!",
 								true);
@@ -118,7 +130,31 @@ BMenu* TimeBox::BuildMinutesMenu(void)
 	}
 	// <-- end of loop on minutes 0 - 55 with step of 5
 	
-	return toReturn;
+	return(toReturn);
 }
 // <-- end of function TimeBox::BuildMinutesMenu(void)
+
+//! Function Value
+/*! \brief Returns the current time set in the control
+	\return The current time - first 16 bit is hours, last is minutes.
+*/
+int32 TimeBox::Value()
+{
+	int32 toReturn = 0;	// Nullify all bits
+	toReturn |= ((this->fHours & 0x00FF) << 16);	// Set the bits 16-24 to hours
+	toReturn |= (this->fMinutes & 0x00FF);	// Set the bits 0-8 to minutes
+	return (toReturn);
+}
+// <-- end of function TimeBox::Value
+
+//! Function SetValue
+/*!	\brief Set the current hours and minutes to the submitted values.
+	\param value [in] Bits 16-24 are hours to be set, bits 0-8 are minutes.
+	\return None.
+*/
+void TimeBox::SetValue(int32 toSet) {
+	this->fHours = (int )(toSet & 0xFFFF0000) >> 16;
+	this->fMinutes = (int )(toSet & 0x0000FFFF);
+}
+// <-- end of function TimeBox::SetValue
 	

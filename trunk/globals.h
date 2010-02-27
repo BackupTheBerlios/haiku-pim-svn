@@ -12,7 +12,20 @@
 
 #include "./Support/ErrorAlert.h"
 
+/*! \enum ReturnCode
+  	\brief The code to be returned throughout of the program, 
+  		including to the OS upon exit.
+*/
+enum ReturnCode {
+	OK = 0,						// 0
+	NOT_ENOUGH_MEMORY,			// 1
+	NOT_ENOUGH_DISK_SPACE		// 2
+};
+
 class ErrorAlert;
 
+
+// Global variables
+enum ReturnCode exitValue;		// The exit value of the program
 
 #endif // __GLOBALS_H__

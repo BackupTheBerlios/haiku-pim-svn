@@ -13,6 +13,8 @@
 
 #include <InterfaceKit.h>
 
+#include "..\globals.h"
+
 /*!	\class 		ErrorAlert
 	\brief		A simple class for representing an information box 
 					informing the user about any errors.
@@ -24,11 +26,15 @@ class ErrorAlert : public BAlert
 					  const char *button0Label,
 					  const char *button1Label = NULL,
 					  const char *button2Label = NULL,
-					  alert_type type = B_STOP_ALERT) :
+					  alert_type type = B_STOP_ALERT,
+					  bool stop = true) :
 		BAlert(title, text, button0Label, button1Label, button2Label,
 				B_WIDTH_AS_USUAL, type)
 	{
 		this->Go();
+		if (stop) {
+			exit(exitValue);	
+		}
 	}
 	
 	public ErrorAlert(const char *text,
@@ -38,7 +44,7 @@ class ErrorAlert : public BAlert
 	{
 		this->Go();
 		if (stop) {
-			exit(1);
+			exit(exitValue);
 		}	
 	}
 		

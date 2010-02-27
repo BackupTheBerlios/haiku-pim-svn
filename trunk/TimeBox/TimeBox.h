@@ -11,7 +11,7 @@
 */
 
 #include <InterfaceKit.h>
-#include "../globals.h"
+#include "../globals.h" 
 
 #define HOUR_CHANGED	0xA000
 #define MIN_CHANGED		0xA001
@@ -62,7 +62,7 @@ class TimeBox : public BControl
 		// Time setters and getters derived from BControl		
 		virtual void MessageReceived(BMessage message);
 		virtual int32 Value();	// See note of the next function
-		virtual void SetValue(int32 valueIn);	// hours are first 16 bits,
+		virtual void SetValue(int32 toSet);		// hours are first 16 bits,
 												// minutes are last 16 bits.
 		// Class-specific time setters
 		virtual bool SetTime(time_t time);
