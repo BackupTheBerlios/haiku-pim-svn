@@ -158,3 +158,62 @@ void TimeBox::SetValue(int32 toSet) {
 }
 // <-- end of function TimeBox::SetValue
 	
+//! Function IsCheckBoxEnabled
+/*! \brief	Returns if the embedded check box is enabled or not
+	\return	If the checkbox is embedded, returns its state. Else, returns false.
+*/
+bool TimeBox::IsCheckBoxEnabled() {
+	if (this->fCheckBox != NULL) {
+		return this->fCheckBox->IsEnabled();
+	} else {
+		return false;
+	}		
+}
+// <-- end of function IsCheckBoxEnabled
+
+//! Function SetCheckBoxEnabled
+/*! \brief	Changes the state of the embedded checkbox.
+	\param	state [in] The new state of the embedded checkbox.
+	\note	If there is no embedded checkbox, this function performs no action.
+*/
+void TimeBox::SetCheckBoxEnabled(bool state) {
+	if (this->fCheckBox != NULL) {
+		this->fCheckBox->SetEnabled(state);
+	}
+}
+// <-- end of function SetCheckBoxEnabled
+
+//! Function CheckBoxLabel
+/*! \brief	Returns the label of the embedded checkbox.
+	\return	If the checkbox is not embedded, returns NULL, else returns its label.
+	\note	The returned string belongs to the BControl; it can't be altered.
+*/
+const char* TimeBox::CheckBoxLabel() const {
+	char* toReturn = NULL;
+	if (this->fCheckBox != NULL) {
+		toReturn = this->fCheckBox->Label();
+	}
+	return toReturn;
+}
+// <-- end of function CheckBoxLabel
+
+//! Function SetCheckBoxLabel
+/*! \brief	Sets the label of the embedded checkbox.
+	\param	label [in] The label to be set. It's on caller's responsibility to free it!!!
+	\note	If there is no embedded checkbox, this function does nothing.
+*/
+void TimeBox::SetCheckBoxLabel(const char *label) {
+	if (NULL == label) { return; }		// Sanity check
+	if (NULL != this->fCheckBox) {
+		fCheckBox->SetLabel(label);
+	}
+}
+// <-- end of function SetCheckBoxLabel
+
+//! Function IsEnabled
+/*! \brief	Returns a boolean which is "true" if this control is enabled and "false" otherwise
+*/
+bool TimeBox::IsEnabled() {
+	return (this->Label->IsEnabled());
+}
+// <-- end of function IsEnabled

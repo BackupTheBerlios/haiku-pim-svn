@@ -38,10 +38,12 @@ class TimeBox : public BControl
 		int fMinutes;
 		char* fLabel;
 		
-		BLabel* fLabel;
+		BLabel *fLabel;
 		BMenuBar *fMenubar;
 		BMenu *fHoursMenu;
 		BMenu *fMinutesMenu;
+		BCheckBox *fCheckBox;
+		BLabel *fCheckBoxLabel;
 		
 		virtual void BuildHoursMenu();
 		virtual void BuildMinutesMenu();
