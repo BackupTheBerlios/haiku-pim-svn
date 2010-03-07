@@ -214,6 +214,31 @@ void TimeBox::SetCheckBoxLabel(const char *label) {
 /*! \brief	Returns a boolean which is "true" if this control is enabled and "false" otherwise
 */
 bool TimeBox::IsEnabled() {
-	return (this->Label->IsEnabled());
+	return (this->fLabel->IsEnabled());
 }
 // <-- end of function IsEnabled
+
+//! Function SetEnabled
+/*! \brief	Enables or disables the whole control.
+	\param	state [in] If true, enables the control; else, disables it.
+*/
+void TimeBox::SetEnabled(bool state) {
+	if (this->fLabel->IsEnabled() == state) { return; }	// No need to do anything
+	this->fCheckBox->SetEnabled(state);
+	this->fMenubar->SetEnabled(state);
+	this->fHoursMenu->SetEnabled(state);
+	this->fMinutesMenu->SetEnabled(state);
+	this->fLabel->SetEnabled(state);
+}
+// <-- end of function SetEnabled
+
+//! Function Draw
+/*! \brief	The main drawing function of the control.
+	\note	Fills the background with the background color. Then calls recursively Draw 
+			of every attached child.
+	\param	updateRect [in] The rectangle which needs to be updated - in internal coords.
+*/
+void TimeBox::Draw(BRect updateRect) {
+	
+}
+// <-- end of function Draw
