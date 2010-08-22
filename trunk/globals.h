@@ -19,7 +19,9 @@
 enum ReturnCode {
 	OK = 0,						// 0
 	NOT_ENOUGH_MEMORY,			// 1
-	NOT_ENOUGH_DISK_SPACE		// 2
+	NOT_ENOUGH_DISK_SPACE,		// 2
+	CANT_FIND_REQUIRED_ITEM		// 3
+
 };
 
 class ErrorAlert;

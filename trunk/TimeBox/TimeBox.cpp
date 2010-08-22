@@ -86,6 +86,9 @@ BMenu* TimeBox::BuildHoursMenu(void)
 		toReturn->AddItem(toAdd);
 	}
 	// <-- end of loop on hour values 0 - 23
+
+	toReturn->SetRadioMode(true);	// Set the menu to work as a radio button union
+	toReturn->SetLabelFromMarked(true);	// The shown value is currently selected hours
 	
 	return(toReturn);
 }
@@ -129,6 +132,9 @@ BMenu* TimeBox::BuildMinutesMenu(void)
 		toReturn->AddItem(toAdd);
 	}
 	// <-- end of loop on minutes 0 - 55 with step of 5
+
+	toReturn->SetRadioMode(true);	// Making the menu work as a radiobutton union
+	toReturn->SetLabelFromMarked(true);	// The shown value will be currently selected minutes
 	
 	return(toReturn);
 }
@@ -153,8 +159,39 @@ int32 TimeBox::Value()
 	\return None.
 */
 void TimeBox::SetValue(int32 toSet) {
+	char label[3];		// A placeholder for the label - we'll need to update the selected items.
+	BMenuItem *toUpdate = NULL;	// A placeholder for the menuitem to be selected after update.
+
 	this->fHours = (int )(toSet & 0xFFFF0000) >> 16;
-	this->fMinutes = (int )(toSet & 0x0000FFFF);
+	// Using rounding to receive the closest multiplication of 5 minutes
+	// Then multiplying by 5 to obtain the actual minutes value
+	this->fMinutes = ((int )5)*(((int )(toSet & 0x0000FFFF)) + 2)/((int )5);
+	
+	// Update the hours menu
+	sprintf(label, "%d", this->fHours);
+	toUpdate = this->fHoursMenu->FindItem(label);
+	if (NULL == toUpdate) {	// Didn't find the item to be selected
+		exitValue = CANT_FIND_REQUIRED_ITEM;
+		ErrorAlert *ex = 
+				new ErrorAlert("Can't find the hours menu item to be updated!",
+								false);	// No need to stop the program
+	} else {
+		toUpdate->Invoke();		// Selecting the requested hours
+	}
+	toUpdate = NULL;
+
+	// Update the minutes menu
+	sprintf(label, "%d", this->fMinutes);
+	toUpdate = this->fMinutesMenu->FindItem(label);
+	if (NULL == toUpdate) {	// Didn't find the item to be selected
+		exitValue = CANT_FIND_REQUIRED_ITEM;
+		ErrorAlert *ex = 
+				new ErrorAlert("Can't find the minutes menu item to be updated!",
+								false);	// No need to stop the program
+	} else {
+		toUpdate->Invoke();		// Selecting the requested minutes
+	}
+
 }
 // <-- end of function TimeBox::SetValue
 	
@@ -228,7 +265,7 @@ void TimeBox::SetEnabled(bool state) {
 	this->fMenubar->SetEnabled(state);
 	this->fHoursMenu->SetEnabled(state);
 	this->fMinutesMenu->SetEnabled(state);
-	this->fLabel->SetEnabled(state);
+		this->fLabel->SetEnabled(state);
 }
 // <-- end of function SetEnabled
 
@@ -242,3 +279,37 @@ void TimeBox::Draw(BRect updateRect) {
 	
 }
 // <-- end of function Draw
+
+//! Function MessageReceived
+/*! \brief	Performs activities when a message is received.
+	\param	message [in] Pointer to the message to be treated.
+*/
+void TimeBox::MessageReceived(BMessage* message) {
+	int8 value = 0;
+	if (!msg->HasSpecifiers()) {
+		switch (msg->what) {
+			case HOUR_CHANGED:
+				if (B_OK != message->FindInt8("value", &value)) {
+					exitValue = CANT_FIND_REQUIRED_ITEM;
+					ErrorAlert *ex = 
+						new ErrorAlert("Can't find the selected value of hours!",
+								true);	// This is serious error, the program must be stopped
+				}
+				this->fHours = value;	// No need in type conversion
+				break;
+			case MIN_CHANGED:
+				if (B_OK != message->FindInt8("value", &value)) {
+					exitValue = CANT_FIND_REQUIRED_ITEM;
+					ErrorAlert *ex = 
+						new ErrorAlert("Can't find the selected value of minutes!",
+								true);	// This is serious error, the program must be stopped
+				}
+				this->fMinutes = value;	// No need in type conversion
+				break;
+			default:
+				break;
+		}
+	}
+}
+// <-- end of function MessageReceived
+
