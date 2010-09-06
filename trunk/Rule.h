@@ -18,12 +18,8 @@ typedef enum RULEKIND {
 
 	kWeekly,		/*!< The pattern of occurrences repeats every week.
 						 Example: "Every sunday, monday and friday".
-						 This is the only kind of recurrence rule that requires a list of
-						 struct tm datastructures. All others use only one struct tm.
-						 Every single day requires a dedicated "struct tm" in the list.
-						 Otherwise, the rule can be programmatically separated to up to 
-						 7 rules, one for each day of week. Both ways are OK, but the first one
-						 is preferred.
+						 The weekday (tm_wday) is a set of bits as defined in enum WEEKDAYS. The bits which
+						 are set define when the Event will occur.
 						 Only \c tm_hour, \c tm_min and \c tm_wday of every element in the list matter. */
 
 	kMonthlyDates,	/*!< The pattern repeats itself on a specific date of the month.
@@ -41,7 +37,7 @@ typedef enum RULEKIND {
 						 Just like MONTHLY_DATES, but this time tm_month is also used. */
 
 	kYearlyRelative	/*!< The pattern repeats itself on the relative dates of every year.
-						 The relative month is set by \c tm_month and can be everything from \c MIN_INT to
+						 The relative month is set by \c tm_month and can be everything from \c MIN_INT to	
 						 \c MAX_INT, excluding 0. Actual limits are set by the selected CalendarModule. 
 						 If \c tm_month is 0, then this rule is ignored. */
 
@@ -76,7 +72,7 @@ typedef	union EFFECTIVE_UNTIL {
 typedef struct Rule {
 	RuleKind kind;		/*!< The kind of the rule.
 							 \sa enum RULEKIND */
-	struct tm *dates;	//!< The list of \b beginnings of recurrences.
+	struct tm dates;	//!< The list of \b beginnings of recurrences.
 	int numOfElements;	//!< Number of elements in list \c dates.
 	bool omitted;		//!< If this variable is "true", this rule is omitted.
 	RecurrencyDefinition inEffect;	//!< Definition of rule's recurrency.
