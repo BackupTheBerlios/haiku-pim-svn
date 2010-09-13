@@ -2,7 +2,7 @@
 
 #include <support/String.h>
 #include <posix/time.h>
-#include <string.h>
+#include <posix/string.h>
 
 /*! \enum	WEEKDAYS
 	\brief	The Calendar Module allows to check what day of week is a local date.
@@ -38,7 +38,7 @@ private:
 
 public:
 	TimeRepresentation();
-	TimeRepresentation(struct tm &in, BString &calModule = "Gregorian");
+	TimeRepresentation(struct tm &in, BString &calModule);
 	TimeRepresentation(TimeRepresentation &in);
 	virtual ~TimeRepresentation();
 

@@ -3,14 +3,13 @@
 
 /*! \function		TimeRepresentation
  *	\brief			Constructor from struct tm and BString for calendar module name.
- *	\details		The calendar module by default is Gregorian calendar.
- *					However, it is a really bad practice to construct a TimeRepresentation
+ *	\details		It is a really bad practice to construct a TimeRepresentation
  *					object without explicitly referencing a CalendarModule.
  *	\param[in]	in			The struct tm to be initialized from.
  *	\param[in]	calModule	The calendar module to be used.
  *	\sa				CalendarModule, struct tm
  */
-TimeRepresentation::TimeRepresentation(struct tm in, BString calModule = "Gregorian") {
+TimeRepresentation::TimeRepresentation(struct tm& in, BString& calModule ) {
 	int length = 0;		// Used later for getting size of the 
 
 	// Hour and minute (and irrelevant second)
