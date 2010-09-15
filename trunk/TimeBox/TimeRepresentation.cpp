@@ -143,3 +143,63 @@ TimeRepresentation::~TimeRepresentation() {
 }
 // <-- end of destructor of TimeRepresentation
 
+/*! \function		Assignment operator
+ *	\brief			Duh?
+ *	\param[in]	in	The value to which the assignment should be performed.
+ *	\returns		Reference to the object overgone assignment.
+ */
+TimeRepresentation& TimeRepresentation::operator=(const TimeRepresentation &in) {
+	int limit=0;
+	// Simply copying the submitted struct, field by field.
+	this->fCalendarModule.SetTo(in.fCalendarModule);
+	this->tm_hour = in.tm_hour;
+	this->tm_min = in.tm_min;
+	this->tm_sec = in.tm_sec;
+	this->tm_mday = in.tm_mday;
+	this->tm_mon = in.tm_mon;
+	this->tm_year = in.tm_year;
+	this->tm_wday = in.tm_wday;
+	this->tm_yday = in.tm_yday;
+	this->tm_isdst = in.tm_isdst;
+	this->tm_gmtoff = in.tm_gmtoff;
+	// Copy the time zone information
+	if (this->tm_zone != NULL) {
+		delete this->tm_zone;
+	}
+	if (in.tm_zone && (limit=strlen(in.tm_zone))) {
+		this->tm_zone = new char[limit+1];
+		strcpy(this->tm_zone, in.tm_zone);		
+	} else {
+		this->tm_zone = NULL;
+	}
+}
+// <-- end of TimeRepresentation::operator=
+
+/*!	\function		Comparison operator
+ *	\brief			Allows field-by-field comparison of two TimeRepresentations
+ *	\param[in]	in	The TimeRepresentation object to be compared with.
+ *	\returns		true if the objects are equal, else false.
+ */
+bool TimeRepresentation::operator== (const TimeRepresentation& in) {
+	if ((this->fCalendarModule == in.fCalendarModule)	&&
+		(this->tm_year == in.tm_year)					&&
+		(this->tm_mon == in.tm_mon)						&&
+		(this->tm_mday == in.tm_mday)					&&
+		(this->tm_hour == in.tm_hour)					&&
+		(this->tm_min == in.tm_min)						&&
+		(this->tm_sec == in.tm_sec)						&&
+		(this->tm_wday == in.tm_wday)					&&
+		(this->tm_yday == in.tm_yday)					&&
+		(this->tm_isdst == in.tm_isdst)					&&
+		(this->tm_gmtoff == in.tm_gmtoff))
+	{
+		if (((this->tm_zone != NULL) && (in.tm_zone != NULL) && (strcmp(this->tm_zone, in.tm_zone) == 0)) || 
+			((this->tm_zone == NULL) && (in.tm_zone == NULL)))
+		{
+			return true;
+		}
+	} else {
+		return false;
+	}
+}
+// <-- end of TimeRepresentation::operator==

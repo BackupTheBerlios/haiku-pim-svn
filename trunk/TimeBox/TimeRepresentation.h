@@ -46,6 +46,10 @@ public:
 	inline virtual void SetCalendarModule(const BString &module) { this->fCalendarModule.SetTo(module); }
 
 	virtual const struct tm GetRepresentedTime(void);	
+
+	// Operators
+	TimeRepresentation& operator= (const TimeRepresentation& in);
+	bool operator== (const TimeRepresentation &in);
 };
 
 
