@@ -38,7 +38,7 @@ private:
 
 public:
 	TimeRepresentation();
-	TimeRepresentation(struct tm &in, BString &calModule);
+	TimeRepresentation(struct tm &in, BString &calModule = "Gregorian");
 	TimeRepresentation(TimeRepresentation &in);
 	virtual ~TimeRepresentation();
 
