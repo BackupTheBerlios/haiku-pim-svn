@@ -9,7 +9,7 @@
  *	\param[in]	calModule	The calendar module to be used.
  *	\sa				CalendarModule, struct tm
  */
-TimeRepresentation::TimeRepresentation(struct tm& in, BString& calModule ) {
+TimeRepresentation::TimeRepresentation(struct tm& in, BString calModule ) {
 	int length = 0;		// Used later for getting size of the 
 
 	// Hour and minute (and irrelevant second)

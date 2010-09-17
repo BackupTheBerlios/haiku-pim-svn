@@ -1,4 +1,6 @@
 #pragma once
+#ifndef	__TIME_REPRESENTATION_H__
+#define __TIME_REPRESENTATION_H__
 
 #include <support/String.h>
 #include <posix/time.h>
@@ -38,7 +40,7 @@ private:
 
 public:
 	TimeRepresentation();
-	TimeRepresentation(struct tm &in, BString &calModule = "Gregorian");
+	TimeRepresentation(struct tm &in, BString calModule = BString("Gregorian"));
 	TimeRepresentation(TimeRepresentation &in);
 	virtual ~TimeRepresentation();
 
@@ -52,6 +54,4 @@ public:
 	bool operator== (const TimeRepresentation &in);
 };
 
-
-
-
+#endif	// __TIME_REPRESENTATION_H__
