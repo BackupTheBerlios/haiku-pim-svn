@@ -1,5 +1,7 @@
 #include "CalendarModule.h"
 
+BList listOfCalendarModules;
+
 CalendarModule::CalendarModule(const BString& in)
 {
 	this->id.SetTo(in);

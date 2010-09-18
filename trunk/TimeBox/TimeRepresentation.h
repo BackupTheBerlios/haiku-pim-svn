@@ -1,4 +1,3 @@
-#pragma once
 #ifndef	__TIME_REPRESENTATION_H__
 #define __TIME_REPRESENTATION_H__
 
@@ -6,8 +5,6 @@
 #include <support/List.h>
 #include <posix/time.h>
 #include <posix/string.h>
-// #include <cpp/list.h>
-#include "CalendarModule.h"
 
 using namespace std;
 
@@ -31,6 +28,8 @@ typedef enum WEEKDAYS {
 	kInvalid	= 0x8000
 } WeekDays;
 
+#include "CalendarModule.h"
+
 /*! \class	TimeRepresentation
 	\brief	This class is an expansion of the struct tm.
 
@@ -53,8 +52,8 @@ public:
 	virtual ~TimeRepresentation();
 
 	inline virtual void SetIsRepresentingRealDate(bool in) { this->fIsRepresentingRealDate = in; }
-	inline virtual const bool GetIsRepresentingRealDate(void) { return this->fIsRepresentingRealDate; }
-	inline virtual const BString GetCalendarModule(void) { BString a(this->fCalendarModule); return a; }
+	inline virtual const bool GetIsRepresentingRealDate (void) const { return this->fIsRepresentingRealDate; }
+	inline virtual const BString GetCalendarModule (void) const { BString a(this->fCalendarModule); return a; }
 	inline virtual void SetCalendarModule(const BString &module) { this->fCalendarModule.SetTo(module); }
 
 	virtual const tm GetRepresentedTime(void);
@@ -67,10 +66,10 @@ public:
 //	virtual TimeRepresentation& operator+= (const TimeRepresentation& op1);
 //	virtual TimeRepresentation operator- (const TimeRepresentation& op1, const TimeRepresentation &op2);
 //	virtual TimeRepresentation& operator-= (const TimeRepresentation& op1);
-	virtual bool operator<(const TimeRepresentation& in);
-	virtual inline bool operator<= (const TimeRepresentation &in) { return (this->operator<(in) || this->operator==(in)); }
-	virtual inline bool operator> (const TimeRepresentation &in) { return (!this->operator<=(in)); }
-	virtual inline bool operator>= (const TimeRepresentation &in) { return (!this->operator<(in)); }
+	virtual bool operator<( TimeRepresentation& in);
+	virtual inline bool operator<= ( TimeRepresentation &in) { return (this->operator<(in) || this->operator==(in)); }
+	virtual inline bool operator> ( TimeRepresentation &in) { return (!this->operator<=(in)); }
+	virtual inline bool operator>= ( TimeRepresentation &in) { return (!this->operator<(in)); }
 };
 
 #endif	// __TIME_REPRESENTATION_H__

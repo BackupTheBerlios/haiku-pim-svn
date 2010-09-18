@@ -1,20 +1,17 @@
-#pragma once
 #ifndef __CALENDAR_MODULE_H__
 #define __CALENDAR_MODULE_H__
 
-#include <posix/time.h>
+#include <time.h>
 #include <ctime>
-#include <cpp/map.h>
+#include <map.h>
 #include <support/SupportDefs.h>
 #include <support/List.h>
-#include <locale/TimeZone.h>
 #include <support/String.h>
 
 #include "TimeRepresentation.h"
 
-BList listOfCalendarModules;
-
 class TimeRepresentation;
+enum WEEKDAYS;
 
 /*! \struct		DoubleNames
  *	\brief		A structure which consists of two strings.
@@ -45,8 +42,8 @@ public:
 	virtual TimeRepresentation FromTimeTToLocalCalendar(const time_t timeIn) = 0;
 
 	//! These functions translate the years to and from the local calendar.
-	int FromLocalToGregorianYear(int year) = 0;
-	virtual virtual int FromGregorianToLocalYear(int year) = 0;
+	virtual int FromLocalToGregorianYear(int year) = 0;
+	virtual int FromGregorianToLocalYear(int year) = 0;
 	
 	//! These functions return the names of the months in given year.
 	virtual map<int, DoubleNames> GetMonthNamesForGregorianYear(int gregorianYear) = 0;
@@ -55,7 +52,6 @@ public:
 	//! These functions return the localized names of the days in given year and month.
 	virtual map<int, BString> GetDayNamesForGregorianYearMonth(int gregoryanYear, int month) = 0;
 	virtual map<int, BString> GetDayNamesForLocalYearMonth(int localYear, int month) = 0;
-	virtual map<int, BString> GetWeekdayNames(void) = 0;
 
 	/*! The following function returns map where each weekday's name is mapped to corresponding
 	 *	int from the enum WEEKDAYS.
@@ -64,7 +60,7 @@ public:
 
 	/*!	\brief	This way the caller can place a given date at a specific place in the grid.
 	 */
-	virtual WeekDays GetWeekDayForLocalDate(TimeRepresentation& date) = 0;
+	virtual enum WEEKDAYS GetWeekDayForLocalDate(TimeRepresentation& date) = 0;
 	virtual int DayFromBeginningOfTheYear(TimeRepresentation& date) = 0;
 
 	//! Identification
@@ -72,6 +68,7 @@ public:
 	
 	//! Construction and destruction
 	CalendarModule();
+	CalendarModule(const BString& );
 	CalendarModule(const CalendarModule& in);
 	virtual ~CalendarModule(void);
 
@@ -81,11 +78,11 @@ public:
 	 *			It's the caller's responcibility to call this function only when 
 	 *			the constructed struct tm represents really a date.
 	 */
-	virtual static bool IsDateValid(TimeRepresentation& in) = 0;
+	virtual bool IsDateValid(TimeRepresentation& in) = 0;
 
 	/*! \brief	This function calculates time difference between two dates.
 	 */
-	TimeRepresentation GetDifference(const TimeRepresentation& op1, const TimeRepresentation& op2, bool daysOnly = false) = 0;
+	virtual TimeRepresentation GetDifference(const TimeRepresentation& op1, const TimeRepresentation& op2, bool daysOnly = false) = 0;
 
 	//! Date manipulation routines
 	virtual TimeRepresentation AddTime(const TimeRepresentation &op1, const TimeRepresentation &op2) = 0;
