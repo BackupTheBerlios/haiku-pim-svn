@@ -3,8 +3,15 @@
 #define __TIME_REPRESENTATION_H__
 
 #include <support/String.h>
+#include <support/List.h>
 #include <posix/time.h>
 #include <posix/string.h>
+// #include <cpp/list.h>
+#include "CalendarModule.h"
+
+using namespace std;
+
+extern BList listOfCalendarModules;
 
 /*! \enum	WEEKDAYS
 	\brief	The Calendar Module allows to check what day of week is a local date.
@@ -37,6 +44,7 @@ typedef enum WEEKDAYS {
 class TimeRepresentation : public tm {
 private:
 	BString fCalendarModule;	//!< String that defines the Calendar module used for the representation
+	bool fIsRepresentingRealDate;	//!< This variable is "true", if current object represents an actual date.	
 
 public:
 	TimeRepresentation();
@@ -44,14 +52,25 @@ public:
 	TimeRepresentation(TimeRepresentation &in);
 	virtual ~TimeRepresentation();
 
+	inline virtual void SetIsRepresentingRealDate(bool in) { this->fIsRepresentingRealDate = in; }
+	inline virtual const bool GetIsRepresentingRealDate(void) { return this->fIsRepresentingRealDate; }
 	inline virtual const BString GetCalendarModule(void) { BString a(this->fCalendarModule); return a; }
 	inline virtual void SetCalendarModule(const BString &module) { this->fCalendarModule.SetTo(module); }
 
-	virtual const struct tm GetRepresentedTime(void);	
+	virtual const tm GetRepresentedTime(void);
+	
 
 	// Operators
-	TimeRepresentation& operator= (const TimeRepresentation& in);
-	bool operator== (const TimeRepresentation &in);
+	virtual TimeRepresentation& operator= (const TimeRepresentation& in);
+	virtual bool operator== (const TimeRepresentation &in);
+//	virtual TimeRepresentation operator+ (const TimeRepresentation& op1, const TimeRepresentation &op2);
+//	virtual TimeRepresentation& operator+= (const TimeRepresentation& op1);
+//	virtual TimeRepresentation operator- (const TimeRepresentation& op1, const TimeRepresentation &op2);
+//	virtual TimeRepresentation& operator-= (const TimeRepresentation& op1);
+	virtual bool operator<(const TimeRepresentation& in);
+	virtual inline bool operator<= (const TimeRepresentation &in) { return (this->operator<(in) || this->operator==(in)); }
+	virtual inline bool operator> (const TimeRepresentation &in) { return (!this->operator<=(in)); }
+	virtual inline bool operator>= (const TimeRepresentation &in) { return (!this->operator<(in)); }
 };
 
 #endif	// __TIME_REPRESENTATION_H__

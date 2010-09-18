@@ -10,7 +10,10 @@
  *	\sa				CalendarModule, struct tm
  */
 TimeRepresentation::TimeRepresentation(struct tm& in, BString calModule ) {
-	int length = 0;		// Used later for getting size of the 
+	int length = 0;		// Used later for getting size of the time zone string
+
+	// Since we got the struct tm as the input, it's suggested that a real date is represented.
+	this->fRepresentingRealDate = true;
 
 	// Hour and minute (and irrelevant second)
 	this->tm_hour = in.tm_hour;
@@ -50,6 +53,7 @@ TimeRepresentation::TimeRepresentation(struct tm& in, BString calModule ) {
  */
 TimeRepresentation::TimeRepresentation() {
 	this->fCalendarModule.Truncate(0);
+	this->fRepresentingRealDate = false;
 	this->tm_zone = NULL;
 }
 // <-- end of empty constructor of TimeRepresentation
@@ -73,6 +77,7 @@ TimeRepresentation::TimeRepresentation(TimeRepresentation &in) {
 	this->tm_yday = in.tm_yday;
 	this->tm_isdst = in.tm_isdst;
 	this->tm_gmtoff = in.tm_gmtoff;
+	this->fRepresentingRealDate = in.fRepresentingRealDate;
 	// Copy the time zone information
 	if (in.tm_zone && (limit=strlen(in.tm_zone))) {
 		this->tm_zone = new char[limit+1];
@@ -82,7 +87,6 @@ TimeRepresentation::TimeRepresentation(TimeRepresentation &in) {
 	}
 }
 // <-- end of copy constructor of TimeRepresentation
-
 
 /*!	\function		TimeRepresentation::GetRepresentedTime
  *	\brief			Returns the time represetned by the TimeRepresentation.
@@ -94,7 +98,7 @@ TimeRepresentation::TimeRepresentation(TimeRepresentation &in) {
  */
 const tm TimeRepresentation::GetRepresentedTime() {
 	tm out;
-	int length;
+	int length;	
 	
 	// Hour and minute (and second)
 	out.tm_hour = this->tm_hour;
@@ -162,6 +166,7 @@ TimeRepresentation& TimeRepresentation::operator=(const TimeRepresentation &in) 
 	this->tm_yday = in.tm_yday;
 	this->tm_isdst = in.tm_isdst;
 	this->tm_gmtoff = in.tm_gmtoff;
+	this->fRepresentingRealDate = in.fRepresentingRealDate;
 	// Copy the time zone information
 	if (this->tm_zone != NULL) {
 		delete this->tm_zone;
@@ -191,6 +196,7 @@ bool TimeRepresentation::operator== (const TimeRepresentation& in) {
 		(this->tm_wday == in.tm_wday)					&&
 		(this->tm_yday == in.tm_yday)					&&
 		(this->tm_isdst == in.tm_isdst)					&&
+		(this->fRepresentingRealDate == in.fRepresentingRealDate) &&
 		(this->tm_gmtoff == in.tm_gmtoff))
 	{
 		if (((this->tm_zone != NULL) && (in.tm_zone != NULL) && (strcmp(this->tm_zone, in.tm_zone) == 0)) || 
@@ -203,3 +209,107 @@ bool TimeRepresentation::operator== (const TimeRepresentation& in) {
 	}
 }
 // <-- end of TimeRepresentation::operator==
+
+/*! \function		TimeRepresentation::operator+
+ *	\brief			Sums two dates
+ *	\details		 
+ *	\param[in]	op1		Const reference to the first operand
+ *	\param[in]	op2		Const reference to the second operand
+ *	\returns		The sum of op1 and op2.
+ *	\remarks		If the dates are set in differennt time zones, the result will belong
+ *					to the time zone of the 1st operand.
+ */
+TimeRepresentation TimeRepresentation::operator+ (const TimeRepresentation &op1, const TimeRepresentation &op2) 
+{
+//	BString calModule1 = this->GetCalendarModule(), calModule2 = in.GetCalendarModule();
+	bool real1 = op1.GetIsRepresentingRealDate(), real2 = op2.GetIsRepresentingRealDate();
+	if (!real1 && real2) {		// Only the second operand is meaningful
+		TimeRepresentation toReturn(op2);
+		toReturn += op1;
+		return toReturn;
+	} 
+	TimeRepresentation toReturn1(op1);
+	toReturn1 += op2;
+	return toReturn1;
+}
+// <-- end of function TimeRepresentation::operator+
+
+/*! \function		TimeRepresentation::operator+=
+ *	\brief			Sums two dates and put the result into "this"
+ *	\details		
+ *	\param[in]	in		Const reference to the date to be added 
+ *	\returns		Reference to "this"
+ *	\remarks		If the dates are set in differennt time zones, the result will belong
+ *					to the time zone of the 1st operand.
+ */ /*
+TimeRepresentation& TimeRepresentation::operator+= (const TimeRepresentation &in) 
+{
+	bool real1 = this->GetIsRepresentingRealDate(), real2 = in.GetIsRepresentingRealDate();
+	if (real1 && real2)	// Both of the dates are real dates 
+	{
+		BString calIn = in.GetCalendarModule(), calThis = this->GetCalendarModule();
+		CalendarModule* calModuleIn = NULL, calModuleThis = NULL;
+		
+		for (int i = 0; i < listOfCalendarModules.CountItems(); i++) {
+			if (calIn == (CalendarModule*)(listOfCalendarModules.ItemAt(i))->Identify()) {
+				calModuleIn = (CalendarModule*)(listOfCalendarModules.ItemAt(i));				
+			}
+			if (calThis == (CalendarModule*)(listOfCalendarModules.ItemAt(i))->Identify()) {
+				calModuleThis = (CalendarModule*)(listOfCalendarModules.ItemAt(i));				``
+			}
+			// If both modules are found - no need to continue looping
+			if (calModuleIn && calModuleThis) { break; }
+		}
+
+		// If one of the requested modules does not exist, exitting immediately.
+		// This is because both TimeRepresentations represent a real data, therefore, they both
+		//   need to be treated using a calendar module. But one of them isn't found; the result
+		//	 of this operation is undefined; we have no choise but to exit.
+		if (!calModuleIn || !calModuleThis) {
+			// Panic!
+			exit(2);
+		}
+
+		// Move both time representations into Gregorian calendar
+		TimeRepresentation tempIn = calModuleIn->fromLocalCalendarToGregorian(in);
+		TimeRepresentation tempThis = calModuleThis->fromLocalCalendarToGregorian(*this);
+
+		// Get the seconds representation for every one of the additives.
+		tm tempInTm = tempIn.GetRepresentedTime();
+		tm tempThisTm = tempThis.GetRepresentedTime();
+		
+		--tempIn.tm_mon
+
+			// Perform addition
+		time_t tempTimeTIn;
+
+		return *this;
+	}
+	// Current time may be real, the other operand is surely not
+	
+	// Sum up times and dates
+	this->tm_sec += in.tm_sec;
+	this->tm_min += in.tm_min;
+	this->tm_hour += in.tm_hour;
+	this->tm_mday += in.tm_mday;
+	this->tm_mon += in.tm_mon;
+	this->tm_year += in.tm_year;
+	return *this;
+}
+// <-- end of function TimeRepresentation::operator+=
+
+*/
+
+/*!	\function	TimeRepresentation::operator<
+ *	\brief		Comparing two TimeRepresentation objects.
+ *	\remarks	The objects must be of the same CalendarModule!
+ */
+virtual bool TimeRepresentation::operator<(const TimeRepresentation& in) {
+	if (this->GetCalendarModule() != in.GetCalendarModule()) { return false; }
+	tm thisTime = this->GetRepresentedTime(), inTime = in.GetRepresentedTime();
+	--thisTime.tm_mon; --inTime.tm_mon;
+	thisTime.tm_year -= 1900; inTime.tm_year -= 1900;
+	time_t time1 = mktime(&thisTime), time2 = mktime(&inTime);
+	return (time1<time2);
+}
+// <-- end of TimeRepresentation::operator<
