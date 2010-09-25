@@ -48,7 +48,7 @@ private:
 public:
 	TimeRepresentation();
 	TimeRepresentation(struct tm &in, BString calModule = BString("Gregorian"));
-	TimeRepresentation(TimeRepresentation &in);
+	TimeRepresentation(const TimeRepresentation &in);
 	virtual ~TimeRepresentation();
 
 	inline virtual void SetIsRepresentingRealDate(bool in) { this->fIsRepresentingRealDate = in; }
@@ -56,20 +56,20 @@ public:
 	inline virtual const BString GetCalendarModule (void) const { BString a(this->fCalendarModule); return a; }
 	inline virtual void SetCalendarModule(const BString &module) { this->fCalendarModule.SetTo(module); }
 
-	virtual const tm GetRepresentedTime(void);
+	virtual const tm GetRepresentedTime (void) const ;
 	
 
 	// Operators
 	virtual TimeRepresentation& operator= (const TimeRepresentation& in);
-	virtual bool operator== (const TimeRepresentation &in);
+	virtual bool operator== (const TimeRepresentation &in) const;
 //	virtual TimeRepresentation operator+ (const TimeRepresentation& op1, const TimeRepresentation &op2);
 //	virtual TimeRepresentation& operator+= (const TimeRepresentation& op1);
 //	virtual TimeRepresentation operator- (const TimeRepresentation& op1, const TimeRepresentation &op2);
 //	virtual TimeRepresentation& operator-= (const TimeRepresentation& op1);
-	virtual bool operator<( TimeRepresentation& in);
-	virtual inline bool operator<= ( TimeRepresentation &in) { return (this->operator<(in) || this->operator==(in)); }
-	virtual inline bool operator> ( TimeRepresentation &in) { return (!this->operator<=(in)); }
-	virtual inline bool operator>= ( TimeRepresentation &in) { return (!this->operator<(in)); }
+	virtual bool operator<(const TimeRepresentation& in) const;
+	virtual inline bool operator<= (const TimeRepresentation &in) const { return (this->operator<(in) || this->operator==(in)); }
+	virtual inline bool operator> (const TimeRepresentation &in) const { return (!this->operator<=(in)); }
+	virtual inline bool operator>= (const TimeRepresentation &in) const { return (!this->operator<(in)); }
 };
 
 #endif	// __TIME_REPRESENTATION_H__

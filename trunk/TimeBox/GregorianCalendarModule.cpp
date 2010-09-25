@@ -1,18 +1,19 @@
 #include <map>
 #include "GregorianCalendarModule.h"
+#include "CalendarModule.h"
 #include "TimeRepresentation.h"
 
 
 GregorianCalendar::GregorianCalendar()
-	:
-	CalendarModule("Gregorian")
 {
+	this->id.SetTo("Gregorian" );
+	this->fDaysInLongestMonth = 31;
 	int i=1;
 	BString builder;
 
 	// Fill in the dates
 	for (; i<32; ++i) {
-		builder << (uint32)i << std::endl();
+		builder << (uint32)i;
 		this->fDaysNames[i] = builder;
 		builder.Truncate(0);		// Remove the contents of the string
 	}
@@ -106,18 +107,22 @@ GregorianCalendar::GregorianCalendar()
 }
 
 GregorianCalendar::GregorianCalendar(const GregorianCalendar &in) 
-	:
-	CalendarModule(in) 
-{ }
+{ 
+	this->fDaysInWeek = in.fDaysInWeek;
+	this->fDaysNames = in.fDaysNames;
+	this->fMonthsNames = in.fMonthsNames;
+	this->fWeekdaysNames = in.fWeekdaysNames;
+	this->id.SetTo(in.id);
+}
 
 int GregorianCalendar::FromGregorianToLocalYear(int year) { return year; }
 
 int GregorianCalendar::FromLocalToGregorianYear(int year) { return year; }
 
-
 map<int, BString> GregorianCalendar::GetDayNamesForLocalYearMonth(int localYear, int month) {
-	return GetDayNamesForGregorianYearMonth(int localYear, int month);
+	return GetDayNamesForGregorianYearMonth(localYear, month);
 }
+
 map<int, BString> GregorianCalendar::GetDayNamesForGregorianYearMonth(int gregorianYear, int month)
 {
 	map<int, BString> toReturn;
@@ -129,7 +134,7 @@ map<int, BString> GregorianCalendar::GetDayNamesForGregorianYearMonth(int gregor
 	}
 	// Now month is between 1 (January) and 12 (December)
 
-	int i = 0, limit;
+	int i = 0, limit = 0;
 	switch (month) {
 		case 1:
 		case 3:
@@ -158,7 +163,7 @@ map<int, BString> GregorianCalendar::GetDayNamesForGregorianYearMonth(int gregor
 			break;
 		default:
 			// Panic!
-
+			break;
 	};
 	for (i=1; i<limit; ++i) {
 		toReturn[i] = this->fDaysNames[i];
@@ -166,15 +171,15 @@ map<int, BString> GregorianCalendar::GetDayNamesForGregorianYearMonth(int gregor
 	return toReturn;
 }
 
-map<int, BString> GregorianCalendar::GetMonthNamesForLocalYear(int localYear) {
-	return map<int, BString>(this->fMonthsNames);
+map<int, DoubleNames> GregorianCalendar::GetMonthNamesForLocalYear(int localYear) {
+	return (this->fMonthsNames);
 }
 
-map<int, BString> GregorianCalendar::GetMonthNamesForGregorianYear(int localYear) {
-	return map<int, BString>(this->fMonthsNames);
+map<int, DoubleNames> GregorianCalendar::GetMonthNamesForGregorianYear(int localYear) {
+	return (this->fMonthsNames);
 }
 
-bool GregorianCalendar::IsYearLeap(TimeRepresentation date) {
+bool GregorianCalendar::IsYearLeap(TimeRepresentation &date) {
 	return IsYearLeap(date.tm_year);
 }
 
@@ -198,13 +203,13 @@ bool GregorianCalendar::IsYearLeap(int year) {
  *					Hours and minutes are between -24:-59 and 24:59.
  */
 bool GregorianCalendar::IsDateValid(TimeRepresentation& date) {	
-	int limit;
+	int limit = 0;
 	if (date.tm_year < 1600) { return false; }		// 
 
-	if (date.tm_month <= 0 || date.tm_month > 12) { return false; }		// 
+	if (date.tm_mon <= 0 || date.tm_mon > 12) { return false; }		// 
 
-	if (date.tm_day <= 0) { return false; }
-	switch (date.tm_month) {
+	if (date.tm_mday <= 0) { return false; }
+	switch (date.tm_mon) {
 		case 1:
 		case 3:
 		case 5:
@@ -224,7 +229,7 @@ bool GregorianCalendar::IsDateValid(TimeRepresentation& date) {
 			break;
 		case 2:
 			// 28 or 29 days in month
-			if (GregorianCalendar::IsYearLeap(date.tm_year)) {
+			if (IsYearLeap(date.tm_year)) {
 				limit = 30;
 			} else {
 				limit = 29;
@@ -232,8 +237,9 @@ bool GregorianCalendar::IsDateValid(TimeRepresentation& date) {
 			break;
 		default:
 			// Panic!
+			break;
 	};
-	if (date.tm_day >= limit) { return false; }
+	if (date.tm_mday >= limit) { return false; }
 	if (date.tm_hour > 24 || date.tm_hour < -24) { return false; }
 	if (date.tm_min > 59 || date.tm_min < -59) { return false; }
 	return true;
@@ -249,12 +255,13 @@ bool GregorianCalendar::IsDateValid(TimeRepresentation& date) {
  *	\param	date	Struct tm describing the date for which the day of week is needed.`
  *	\sa		struct tm, enum WEEKDAYS.
  */
-WeekDays GregorianCalendar::GetWeekDayForLocalDate(const TimeRepresentation date) {
+WeekDays GregorianCalendar::GetWeekDayForLocalDate(const TimeRepresentation& date) {
 	enum WEEKDAYS toReturn = kInvalid;
+	int tempDate = 0;
 	 
-	int dayOfWeek, year = date.tm_year;	
+//	int dayOfWeek, year = date.tm_year;	
 	int q = date.tm_year, k = q % 100, j = (int)q/100, h;
-	int m = date.tm_month; if (m < 3) { m += 12; }	// Month is from 3 (March) to 14 (February)
+	int m = date.tm_mon; if (m < 3) { m += 12; }	// Month is from 3 (March) to 14 (February)
 
 	if (! date.GetIsRepresentingRealDate()) { return kInvalid; }
 
@@ -264,9 +271,10 @@ WeekDays GregorianCalendar::GetWeekDayForLocalDate(const TimeRepresentation date
 	if (h < 1 || h > 7) {
 		toReturn = kInvalid;
 	} else {
-		toReturn = kMonday; --h;	// h is between 0 and 6 including
-		toReturn <<= h;				// shifting from 0 to 6 bytes left.
+		tempDate = (int)kMonday; --h;	// h is between 0 and 6 including
+		tempDate <<= h;				// shifting from 0 to 6 bytes left.
 	}
+	toReturn = (enum WEEKDAYS)tempDate;
 	return toReturn;
 }
 // <-- end of function GregorianCalendar::GetWeekDayForLocalDate
@@ -279,7 +287,7 @@ WeekDays GregorianCalendar::GetWeekDayForLocalDate(const TimeRepresentation date
  *	\param[in]	timeIn		Reference to the time object.
  *	\returns		A positive int for a day of the year, a -1 in case of error.
  */
-virtual int GregorianCalendar::DayFromBeginningOfTheYear(TimeRepresentation& date)
+int GregorianCalendar::DayFromBeginningOfTheYear(TimeRepresentation& date)
 {
 	if (!date.GetIsRepresentingRealDate()) { return -1; }
 	tm time = date.GetRepresentedTime();
@@ -289,6 +297,15 @@ virtual int GregorianCalendar::DayFromBeginningOfTheYear(TimeRepresentation& dat
 	return (date.tm_yday = time.tm_yday);
 }
 // <-- end of function GregorianCalendar::DayFromBeginningOfTheYear
+
+map<int, DoubleNames> GregorianCalendar::GetWeekdayNames(void) {
+	return fWeekdaysNames;	
+}
+
+TimeRepresentation GregorianCalendar::FromGregorianCalendarToLocal(TimeRepresentation &in) {
+	TimeRepresentation toReturn	(in);
+	return toReturn;
+}
 
 /*!	\function		GregorianCalendar::FromLocalCalendarToTimeT
  *	\brief			Converts a local date into a time_t object.
@@ -300,7 +317,7 @@ time_t GregorianCalendar::FromLocalCalendarToTimeT(const TimeRepresentation &tim
 	tm theTime = timeIn.GetRepresentedTime();
 	theTime.tm_year -= 1900;
 	theTime.tm_mon -= 1;	// Month is from 0 to 11
-	toReturn = mktime(theTime);		// Calculating the time_t from the submitted representation
+	toReturn = mktime(&theTime);	// Calculating the time_t from the submitted representation
 	return toReturn;		// Even if mktime returns -1, it's probably Ok.
 }
 // <-- end of function FromLocalCalendarToTimeT
@@ -320,15 +337,15 @@ TimeRepresentation GregorianCalendar::FromTimeTToLocalCalendar(const time_t time
 		exit(3);
 	}
 	int tempDay = 0x01;	// tempDay is 0x01
-	temp->tm_year += 1900;
-	++temp->tm_mon;
-	TimeRepresentation toReturn(*temp, "Gregorian");
+	temp.tm_year += 1900;
+	++(temp.tm_mon);
+	TimeRepresentation toReturn(temp, "Gregorian");
 
 	// Calculating and filling the week day
 
 	// If the resulting day is not Sunday, we need to calculate it in means of 
-	if (temp->tm_wday != 0) {
-		tempDay <<= --temp->tm_wday;		// Now tempDay is between 0x01 for Monday (no change)
+	if (temp.tm_wday != 0) {
+		tempDay <<= --(temp.tm_wday);		// Now tempDay is between 0x01 for Monday (no change)
 											// and 0x20 for Saturday, which is 0x01 shifted left
 											// by 6-1. 6 is for Saturday, and -1 is to cancel Sunday.
 		toReturn.tm_wday = (int)tempDay;
@@ -416,7 +433,7 @@ TimeRepresentation& GregorianCalendar::AddTimeTo1stOperand(TimeRepresentation &o
  *	\remarks		In case of any errors, this function will just exit. It's up to
  *					the caller to call this function only when needed.
  */
- virtual TimeRepresentation GregorianCalendar::NormalizeDate(const TimeRepresentation &in) {
+ TimeRepresentation GregorianCalendar::NormalizeDate(const TimeRepresentation &in) {
 	TimeRepresentation tR(in);	// Here we save time zone information.
 	map<int, BString> daysInMonth;
 
@@ -538,3 +555,33 @@ TimeRepresentation GregorianCalendar::GetDifference(const TimeRepresentation& op
 	return toReturn;
 }
 // <-- end of function GregorianCalendar::GetDifference
+
+
+int GregorianCalendar::GetWeekDayForLocalDateAsInt(const TimeRepresentation& date) {
+	WeekDays wdIn = (this->GetWeekDayForLocalDate(date));
+	if (wdIn == kInvalid) {	return -1; }
+	
+	return FromWeekDaysToInt((unsigned int)wdIn);;
+}
+
+
+int GregorianCalendar::GetWeekDayForLocalDateAsInt(const enum WEEKDAYS in) {
+	if (in == kInvalid) { return -1; }
+	return FromWeekDaysToInt((unsigned int)in);
+}
+
+int GregorianCalendar::FromWeekDaysToInt(unsigned int in) const {
+	if (in == 0) { return -1; }
+	unsigned int a = in-1;
+	unsigned int b = a;	 
+	b <<= 1;
+	b += 1;		// b is a string of 1 in length of in
+	if ((in|a) - b != 0) { return -1; }
+	
+	int toReturn = 1;
+	while (in != 1) {
+		++toReturn;
+		in >>= 1;
+	}
+	return toReturn;
+}

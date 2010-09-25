@@ -1,20 +1,5 @@
+#include "TimeRepresentation.h"
 #include "CalendarModule.h"
-
-BList listOfCalendarModules;
-
-CalendarModule::CalendarModule(const BString& in)
-{
-	this->id.SetTo(in);
-}
-
-CalendarModule::CalendarModule(const CalendarModule &in)
-{
-	this->fDaysInWeek = in.fDaysInWeek;
-	this->fDaysNames = in.fDaysNames;
-	this->fMonthsNames = in.fMonthsNames;
-	this->fWeekdaysNames = in.fWeekdaysNames;
-	this->id.SetTo(in.id);
-}
 
 CalendarModule::~CalendarModule(void)
 {
@@ -23,4 +8,12 @@ CalendarModule::~CalendarModule(void)
 
 const BString CalendarModule::Identify() {
 	return this->id;
+}
+
+unsigned char CalendarModule::GetLongestMonthLength(void) const {
+	return fDaysInLongestMonth;	
+}
+
+unsigned char CalendarModule::GetDaysInWeek(void) const {
+	return fDaysInWeek;
 }

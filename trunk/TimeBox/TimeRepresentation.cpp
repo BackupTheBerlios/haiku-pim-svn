@@ -1,6 +1,8 @@
 #include <string.h>
 #include "TimeRepresentation.h"
 
+BList listOfCalendarModules;
+
 /*! \function		TimeRepresentation
  *	\brief			Constructor from struct tm and BString for calendar module name.
  *	\details		It is a really bad practice to construct a TimeRepresentation
@@ -63,7 +65,7 @@ TimeRepresentation::TimeRepresentation() {
  *	\param[in]	in	Reference to TimeRepresentation from which the copy should be performed.
  *	\remarks		The created copy is deep copy. The time zone is created anew.
  */
-TimeRepresentation::TimeRepresentation(TimeRepresentation &in) {
+TimeRepresentation::TimeRepresentation(const TimeRepresentation &in) {
 	int limit=0;
 	// Simply copying the submitted struct, field by field.
 	this->fCalendarModule.SetTo(in.fCalendarModule);
@@ -96,7 +98,7 @@ TimeRepresentation::TimeRepresentation(TimeRepresentation &in) {
  *	\returns		constant Struct tm of the represented time.
  *	\sa				TimeRepresentation constructor, struct tm.
  */
-const tm TimeRepresentation::GetRepresentedTime() {
+const tm TimeRepresentation::GetRepresentedTime() const {
 	tm out;
 	int length;	
 	
@@ -186,7 +188,7 @@ TimeRepresentation& TimeRepresentation::operator=(const TimeRepresentation &in) 
  *	\param[in]	in	The TimeRepresentation object to be compared with.
  *	\returns		true if the objects are equal, else false.
  */
-bool TimeRepresentation::operator== (const TimeRepresentation& in) {
+bool TimeRepresentation::operator== (const TimeRepresentation& in) const {
 	if ((this->fCalendarModule == in.fCalendarModule)	&&
 		(this->tm_year == in.tm_year)					&&
 		(this->tm_mon == in.tm_mon)						&&
@@ -303,7 +305,7 @@ TimeRepresentation& TimeRepresentation::operator+= (const TimeRepresentation &in
  *	\brief		Comparing two TimeRepresentation objects.
  *	\remarks	The objects must be of the same CalendarModule!
  */
-bool TimeRepresentation::operator<(TimeRepresentation& in) {
+bool TimeRepresentation::operator<(const TimeRepresentation& in) const {
 	if (this->GetCalendarModule() != in.GetCalendarModule()) { return false; }
 //	TimeRepresentation thisTimeRep(*this);
 	tm thisTime = this->GetRepresentedTime();

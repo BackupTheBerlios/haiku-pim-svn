@@ -10,6 +10,8 @@
 
 #include "TimeRepresentation.h"
 
+extern BList listOfCalendarModules;
+
 class TimeRepresentation;
 enum WEEKDAYS;
 
@@ -33,6 +35,7 @@ protected:		// Constants for the calendar calculation
 	map<int, BString> fDaysNames;			//!< Names of the days, localized.
 	map<int, DoubleNames> fWeekdaysNames;	//!< Names of the weekdays, localized, in short and long form.
 	BString id;							//!< Identifier of the module.
+	unsigned char	fDaysInLongestMonth;	//!< How many days the longest month has?
 
 public:
 	//! These functions translate the times from one format to another.
@@ -60,16 +63,19 @@ public:
 
 	/*!	\brief	This way the caller can place a given date at a specific place in the grid.
 	 */
-	virtual enum WEEKDAYS GetWeekDayForLocalDate(TimeRepresentation& date) = 0;
+	virtual enum WEEKDAYS GetWeekDayForLocalDate(const TimeRepresentation& date) = 0;
+	virtual int GetWeekDayForLocalDateAsInt(const TimeRepresentation& date) = 0;
+	virtual int GetWeekDayForLocalDateAsInt(const enum WEEKDAYS in) = 0;
 	virtual int DayFromBeginningOfTheYear(TimeRepresentation& date) = 0;
 
 	//! Identification
 	virtual const BString Identify(void);	
 	
 	//! Construction and destruction
-	CalendarModule();
+/*	CalendarModule();
 	CalendarModule(const BString& );
 	CalendarModule(const CalendarModule& in);
+*/
 	virtual ~CalendarModule(void);
 
 	//! Date legality verification.
@@ -90,6 +96,11 @@ public:
 /*	virtual TimeRepresentation SubTime(const TimeRepresentation &op1, const TimeRepresentation &op2) = 0;
 	virtual TimeRepresentation& SubTimeFrom1stOperand(TimeRepresentation &op1, const TimeRepresentation &op2) = 0;
 */	
+	//! To ease the calculation of the rectangle to display the month
+	virtual void SetLongestMonthLength(const unsigned char length) = 0;
+	virtual unsigned char GetLongestMonthLength(void) const;
+	virtual void SetDaysInWeek(const unsigned char length) = 0;
+	virtual unsigned char GetDaysInWeek(void) const;
 };
 
 #endif		// __CALENDAR_MODULE_H__
