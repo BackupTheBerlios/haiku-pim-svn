@@ -1,4 +1,5 @@
 #include "CalendarControl.h"
+#include "TimeRepresentation.h"
 
 #include <TextView.h>
 #include <String.h>
@@ -8,7 +9,7 @@
 #define 	BUTTON_WIDTH	30
 #define		SPACING			2
 
-const WeekDays firstDayOfEveryWeek = kSunday;
+const uint32 firstDayOfEveryWeek = kSunday;
 
 
 /*==========================================================================
@@ -372,7 +373,7 @@ void CalendarControl::CreateMenu(void) {
 	}
 	BString day; 
 	day << (int )daysInMonth;
-	int width1 = (int )daysInWeek*fixedFont.StringWidth(day.String());
+	int width1 = (int )(daysInWeek*fixedFont.StringWidth(day.String()));
 	int width2 = (int )plainFont.StringWidth(longestMonth.String()) +
 		(int )plainFont.StringWidth("2010");
 		

@@ -13,20 +13,16 @@ extern BList listOfCalendarModules;
 /*! \enum	WEEKDAYS
 	\brief	The Calendar Module allows to check what day of week is a local date.
 	\details	Used also in the Rule for defining a weekly repeating pattern.
-				This Enum is build according to ISO Week Date (part of ISO 8601 standard).
-				See Wikipedia http://en.wikipedia.org/wiki/ISO_week_date
 */
-typedef enum WEEKDAYS {	
-	kMonday		= 0x01,
-	kTuesday	= 0x02,
-	kWednesday	= 0x03,
-	kThursday	= 0x08,
-	kFriday		= 0x10,
-	kSaturday	= 0x20,
-	kSunday		= 0x40,
-	k7DaysWeek	= 0x7F,
-	kInvalid	= 0x8000
-} WeekDays;
+const uint32	kSunday		= 0x00000001;
+const uint32	kMonday		= 0x00000002;
+const uint32	kTuesday	= 0x00000004;
+const uint32	kWednesday	= 0x00000008;
+const uint32	kThursday	= 0x00000010;
+const uint32	kFriday		= 0x00000020;
+const uint32	kSaturday	= 0x00000040;
+const uint32	k7DaysWeek	= 0x0000007F;
+const uint32	kInvalid	= 0x80000000;
 
 #include "CalendarModule.h"
 
@@ -41,10 +37,9 @@ typedef enum WEEKDAYS {
 	\sa			struct tm
 */
 class TimeRepresentation : public tm {
-private:
+protected:
 	BString fCalendarModule;	//!< String that defines the Calendar module used for the representation
 	bool fIsRepresentingRealDate;	//!< This variable is "true", if current object represents an actual date.	
-
 public:
 	TimeRepresentation();
 	TimeRepresentation(struct tm &in, BString calModule = BString("Gregorian"));

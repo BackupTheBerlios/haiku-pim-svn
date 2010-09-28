@@ -15,7 +15,7 @@ private:
 	*/
 	virtual bool IsYearLeap(int year);
 	virtual bool IsYearLeap(TimeRepresentation &date);	
-	virtual int FromWeekDaysToInt(unsigned int in) const;
+	virtual int FromWeekDaysToInt(const uint32 in) const;
 	
 public:
 	GregorianCalendar();
@@ -40,15 +40,15 @@ public:
 	virtual map<int, BString> GetDayNamesForLocalYearMonth(int localYear, int month);
 
 	/*! The following function returns map where each weekday's name is mapped to corresponding
-	 *	int from the enum WEEKDAYS.
+	 *	uint32 from the WEEKDAYS consts.
 	 */
-	virtual map<int, DoubleNames> GetWeekdayNames(void);
+	virtual map<uint32, DoubleNames> GetWeekdayNames(void);
 
 	/*!	\brief	This way the caller can place a given date at a specific place in the grid.
 	 */
-	virtual enum WEEKDAYS GetWeekDayForLocalDate(const TimeRepresentation& date);
+	virtual uint32 GetWeekDayForLocalDate(const TimeRepresentation& date, int* wday = NULL);
 	virtual int GetWeekDayForLocalDateAsInt(const TimeRepresentation& date);
-	virtual int GetWeekDayForLocalDateAsInt(const enum WEEKDAYS in);
+	virtual int GetWeekDayForLocalDateAsInt(const uint32 in);
 	virtual int DayFromBeginningOfTheYear(TimeRepresentation& date);
 
 	inline virtual ~GregorianCalendar(void) {};

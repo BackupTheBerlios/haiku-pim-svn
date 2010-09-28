@@ -70,40 +70,40 @@ GregorianCalendar::GregorianCalendar()
 
 	this->fDaysInWeek = 7;
 
-	WeekDays counter = kSunday;
+	uint32 counter = kSunday;	// 0x01
 	names.longName = "Sunday";
 	names.shortName = "Su";
-	this->fWeekdaysNames[(int )counter] = names;
+	this->fWeekdaysNames[counter] = names;
 
 	counter = kMonday;
 	names.longName = "Monday";
 	names.shortName = "Mo";
-	this->fWeekdaysNames[(int )counter] = names;
+	this->fWeekdaysNames[counter] = names;
 
 	counter = kTuesday;
 	names.longName = "Tuesday";
 	names.shortName = "Tu";
-	this->fWeekdaysNames[(int )counter] = names;
+	this->fWeekdaysNames[counter] = names;
 
 	counter = kWednesday;
 	names.longName = "Wednesday";
 	names.shortName = "We";
-	this->fWeekdaysNames[(int )counter] = names;
+	this->fWeekdaysNames[counter] = names;
 
 	counter = kThursday;
 	names.longName = "Thursday";
 	names.shortName = "Th";
-	this->fWeekdaysNames[(int )counter] = names;
+	this->fWeekdaysNames[counter] = names;
 
 	counter = kFriday;
 	names.longName = "Friday";
 	names.shortName = "Fr";
-	this->fWeekdaysNames[(int )counter] = names;
+	this->fWeekdaysNames[counter] = names;
 
-	counter = kMonday;
+	counter = kSaturday;
 	names.longName = "Saturday";
 	names.shortName = "Sa";
-	this->fWeekdaysNames[(int )counter] = names;
+	this->fWeekdaysNames[counter] = names;
 }
 
 GregorianCalendar::GregorianCalendar(const GregorianCalendar &in) 
@@ -251,15 +251,34 @@ bool GregorianCalendar::IsDateValid(TimeRepresentation& date) {
  *					since it's assumed that the week day is unknown.
  *					Working according to the Zeller's congruence
  *					(Wikipedia: http://en.wikipedia.org/wiki/Zeller's_congruence)
- *	\return			The corresponding day of week - as defined in the WeekDays enum.
- *	\param	date	Struct tm describing the date for which the day of week is needed.`
- *	\sa		struct tm, enum WEEKDAYS.
+ *	\return			The corresponding day of week - as defined by the uint32.
+ *	\param[in]	date	Struct tm describing the date for which the day 
+ *						of week is needed.
+ *	\param[out]	wday	Pointer to an integer. If it's not NULL, the pointer will be
+ *						set to integer which describes the difference between
+ *						day of week of TimeRepresentation submitted in the first
+ *						parameter and previous Sunday.
+ *	\sa		struct tm
  */
-WeekDays GregorianCalendar::GetWeekDayForLocalDate(const TimeRepresentation& date) {
-	enum WEEKDAYS toReturn = kInvalid;
-	int tempDate = 0;
-	 
+uint32 GregorianCalendar::GetWeekDayForLocalDate( const TimeRepresentation& date,
+													int* wdayToReturn)
+{
+	uint32 toReturn = kInvalid;
+
+	tm time = date.GetRepresentedTime();
+	time.tm_mon -= 1;
+	time.tm_year -= 1900;
+	if (mktime(&time) < 0) { return kInvalid; }
+	if (wdayToReturn != NULL) {
+		*wdayToReturn = time.tm_wday;
+	}
+	toReturn = 0x01;	// Sunday
+	--time.tm_wday;		// Difference from Sunday was taken into account
+	toReturn <<= time.tm_wday;
+	return toReturn;
+/*	 
 //	int dayOfWeek, year = date.tm_year;	
+	int tempDate = 0;
 	int q = date.tm_year, k = q % 100, j = (int)q/100, h;
 	int m = date.tm_mon; if (m < 3) { m += 12; }	// Month is from 3 (March) to 14 (February)
 
@@ -275,7 +294,9 @@ WeekDays GregorianCalendar::GetWeekDayForLocalDate(const TimeRepresentation& dat
 		tempDate <<= h;				// shifting from 0 to 6 bytes left.
 	}
 	toReturn = (enum WEEKDAYS)tempDate;
+
 	return toReturn;
+*/
 }
 // <-- end of function GregorianCalendar::GetWeekDayForLocalDate
 
@@ -298,7 +319,7 @@ int GregorianCalendar::DayFromBeginningOfTheYear(TimeRepresentation& date)
 }
 // <-- end of function GregorianCalendar::DayFromBeginningOfTheYear
 
-map<int, DoubleNames> GregorianCalendar::GetWeekdayNames(void) {
+map<uint32, DoubleNames> GregorianCalendar::GetWeekdayNames(void) {
 	return fWeekdaysNames;	
 }
 
@@ -336,7 +357,7 @@ TimeRepresentation GregorianCalendar::FromTimeTToLocalCalendar(const time_t time
 		// Panic!
 		exit(3);
 	}
-	int tempDay = 0x01;	// tempDay is 0x01
+//	int tempDay = 0x01;	// tempDay is 0x01
 	temp.tm_year += 1900;
 	++(temp.tm_mon);
 	TimeRepresentation toReturn(temp, "Gregorian");
@@ -344,13 +365,10 @@ TimeRepresentation GregorianCalendar::FromTimeTToLocalCalendar(const time_t time
 	// Calculating and filling the week day
 
 	// If the resulting day is not Sunday, we need to calculate it in means of 
-	if (temp.tm_wday != 0) {
-		tempDay <<= --(temp.tm_wday);		// Now tempDay is between 0x01 for Monday (no change)
-											// and 0x20 for Saturday, which is 0x01 shifted left
-											// by 6-1. 6 is for Saturday, and -1 is to cancel Sunday.
-		toReturn.tm_wday = (int)tempDay;
+	if (temp.tm_wday >= 0) {
+		toReturn.tm_wday = temp.tm_wday;
 	} else {
-		toReturn.tm_wday = (int)kSunday;
+		toReturn.tm_wday = -1;	// Invalid week day
 	}
 
 	// Setting the time zone to GMT
@@ -496,7 +514,7 @@ TimeRepresentation& GregorianCalendar::AddTimeTo1stOperand(TimeRepresentation &o
 	}
 
 	// Correct day of the week
-	tR.tm_wday = (int) GetWeekDayForLocalDate(tR);
+	GetWeekDayForLocalDate(tR, &tR.tm_wday);
 
 	// Correct day of the year
 	TimeRepresentation Jan1st(tR), difference;	
@@ -549,7 +567,7 @@ TimeRepresentation GregorianCalendar::GetDifference(const TimeRepresentation& op
 	toReturn.tm_hour = differenceTime % 24; differenceTime = (int)(differenceTime / 24);
 	toReturn.tm_yday = differenceTime;
 	toReturn.tm_mon = toReturn.tm_year = toReturn.tm_isdst = toReturn.tm_gmtoff = 0;
-	toReturn.tm_wday = (int )kInvalid;
+	toReturn.tm_wday = -1;
 	toReturn.tm_zone = NULL;
 	toReturn.SetIsRepresentingRealDate(false);
 	return toReturn;
@@ -558,30 +576,30 @@ TimeRepresentation GregorianCalendar::GetDifference(const TimeRepresentation& op
 
 
 int GregorianCalendar::GetWeekDayForLocalDateAsInt(const TimeRepresentation& date) {
-	WeekDays wdIn = (this->GetWeekDayForLocalDate(date));
-	if (wdIn == kInvalid) {	return -1; }
-	
-	return FromWeekDaysToInt((unsigned int)wdIn);;
+	int toReturn;
+	this->GetWeekDayForLocalDate(date, &toReturn);
+	return toReturn;
 }
 
 
-int GregorianCalendar::GetWeekDayForLocalDateAsInt(const enum WEEKDAYS in) {
+int GregorianCalendar::GetWeekDayForLocalDateAsInt(const uint32 in) {	
 	if (in == kInvalid) { return -1; }
-	return FromWeekDaysToInt((unsigned int)in);
+	return FromWeekDaysToInt(in);
 }
 
-int GregorianCalendar::FromWeekDaysToInt(unsigned int in) const {
+int GregorianCalendar::FromWeekDaysToInt(const uint32 in) const {
+	uint32 temp = in;
 	if (in == 0) { return -1; }
-	unsigned int a = in-1;
-	unsigned int b = a;	 
+	uint32 a = in-1;
+	uint32 b = a;	 
 	b <<= 1;
 	b += 1;		// b is a string of 1 in length of in
-	if ((in|a) - b != 0) { return -1; }
+	if ((temp|a) - b != 0) { return -1; }
 	
 	int toReturn = 1;
-	while (in != 1) {
+	while (temp != 1) {
 		++toReturn;
-		in >>= 1;
+		temp >>= 1;
 	}
 	return toReturn;
 }

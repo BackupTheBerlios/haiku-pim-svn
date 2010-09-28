@@ -13,7 +13,6 @@
 extern BList listOfCalendarModules;
 
 class TimeRepresentation;
-enum WEEKDAYS;
 
 /*! \struct		DoubleNames
  *	\brief		A structure which consists of two strings.
@@ -33,7 +32,7 @@ protected:		// Constants for the calendar calculation
 	unsigned char	fDaysInWeek;		//!< Usually it's 7. The range is from 0 to 255.
 	map<int, DoubleNames> fMonthsNames;		//!< Names of the months, localized, in short and long form.
 	map<int, BString> fDaysNames;			//!< Names of the days, localized.
-	map<int, DoubleNames> fWeekdaysNames;	//!< Names of the weekdays, localized, in short and long form.
+	map<uint32, DoubleNames> fWeekdaysNames;	//!< Names of the weekdays, localized, in short and long form.
 	BString id;							//!< Identifier of the module.
 	unsigned char	fDaysInLongestMonth;	//!< How many days the longest month has?
 
@@ -59,13 +58,13 @@ public:
 	/*! The following function returns map where each weekday's name is mapped to corresponding
 	 *	int from the enum WEEKDAYS.
 	 */
-	virtual map<int, DoubleNames> GetWeekdayNames(void) = 0;
+	virtual map<uint32, DoubleNames> GetWeekdayNames(void) = 0;
 
 	/*!	\brief	This way the caller can place a given date at a specific place in the grid.
 	 */
-	virtual enum WEEKDAYS GetWeekDayForLocalDate(const TimeRepresentation& date) = 0;
+	virtual uint32 GetWeekDayForLocalDate(const TimeRepresentation& date, int *wday = NULL) = 0;
 	virtual int GetWeekDayForLocalDateAsInt(const TimeRepresentation& date) = 0;
-	virtual int GetWeekDayForLocalDateAsInt(const enum WEEKDAYS in) = 0;
+	virtual int GetWeekDayForLocalDateAsInt(const uint32 in) = 0;
 	virtual int DayFromBeginningOfTheYear(TimeRepresentation& date) = 0;
 
 	//! Identification
