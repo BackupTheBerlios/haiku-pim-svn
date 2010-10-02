@@ -34,7 +34,7 @@ TimeRepresentation::TimeRepresentation(struct tm& in, BString calModule ) {
 	// Copying time zone information
 	this->tm_gmtoff = in.tm_gmtoff;
 	this->tm_isdst = in.tm_isdst;
-	if (!in.tm_zone && (length=strlen(in.tm_zone)) != 0) {
+	if (in.tm_zone && (length=strlen(in.tm_zone)) != 0) {
 		this->tm_zone = new char[length+1];	// +1 is for NULL character
 		if (!this->tm_zone) {
 			// Panic!
@@ -119,7 +119,7 @@ const tm TimeRepresentation::GetRepresentedTime() const {
 	// Copying time zone information
 	out.tm_gmtoff = this->tm_gmtoff;
 	out.tm_isdst = this->tm_isdst;
-	if (!this->tm_zone && (length=strlen(this->tm_zone))) {
+	if (this->tm_zone && (length=strlen(this->tm_zone))) {
 		out.tm_zone = new char[length+1];	// +1 is for NULL character
 		if (!out.tm_zone) {
 			// Panic!

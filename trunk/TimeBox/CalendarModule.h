@@ -3,7 +3,8 @@
 
 #include <time.h>
 #include <ctime>
-#include <map.h>
+#include <stdlib.h>
+#include <cpp/map>
 #include <support/SupportDefs.h>
 #include <support/List.h>
 #include <support/String.h>

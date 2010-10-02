@@ -1,4 +1,5 @@
 #include <map>
+#include <stdlib.h>
 #include "GregorianCalendarModule.h"
 #include "CalendarModule.h"
 #include "TimeRepresentation.h"
@@ -63,7 +64,6 @@ GregorianCalendar::GregorianCalendar()
 	names.longName = BString("November");
 	names.shortName = BString("Nov");
 	this->fMonthsNames[11] = names;
-
 	names.longName = BString("December");
 	names.shortName = BString("Dec");
 	this->fMonthsNames[12] = names;
@@ -539,7 +539,7 @@ TimeRepresentation& GregorianCalendar::AddTimeTo1stOperand(TimeRepresentation &o
  *	\param[in]	daysOnly	If "true", only days difference means.
  *	\returns	The time representation of the difference.
  */
-TimeRepresentation GregorianCalendar::GetDifference(const TimeRepresentation& op1, const TimeRepresentation& op2, bool daysOnly = false) {
+TimeRepresentation GregorianCalendar::GetDifference(const TimeRepresentation& op1, const TimeRepresentation& op2, bool daysOnly) {
 	TimeRepresentation in1, in2, toReturn;
 	// The difference will always be positive.
 	if (op1 < op2) {
