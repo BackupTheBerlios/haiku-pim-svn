@@ -129,7 +129,14 @@ void CalendarControl::AttachedToWindow() {
 		}
 		looper->UnlockLooper();
 	}
-
+	BMenu* men;
+	if (dateSelector) {
+		for (int i=0; i<dateSelector->CountItems(); i++) {
+			if (men = dateSelector->SubmenuAt(i)) {
+				men->SetTargetForItems(this);	
+			}
+		}	
+	}
 }
 // <-- end of function CalendarControl::AttachedToWindow
 
