@@ -1,4 +1,5 @@
 # --- DO NOT MODIFY THIS LINE -- AUTO-DEPENDS FOLLOW ---
-obj.x86/CalendarModule.o : CalendarModule.h TimeRepresentation.h
+objects.x86-gcc4-debug/IconListItem.o : IconListItem.h clsMainWindow.h \
+    globals.h
 
 # --- DO NOT MODIFY THIS LINE -- AUTO-DEPENDS PRECEDE ---

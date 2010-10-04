@@ -5,6 +5,7 @@
 #include <support/List.h>
 #include <posix/time.h>
 #include <posix/string.h>
+#include <stdlib.h>
 
 using namespace std;
 
@@ -24,7 +25,8 @@ const uint32	kSaturday	= 0x00000040;
 const uint32	k7DaysWeek	= 0x0000007F;
 const uint32	kInvalid	= 0x80000000;
 
-#include "CalendarModule.h"
+// #include "CalendarModule.h"
+class CalendarModule;
 
 /*! \class	TimeRepresentation
 	\brief	This class is an expansion of the struct tm.

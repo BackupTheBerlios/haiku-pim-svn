@@ -7,17 +7,24 @@
 #include <InterfaceKit.h>
 
 #include <time.h>
-#include <map.h>
+#include <map>
+#include <stdlib.h>
 using namespace std;
 
 #include "TimeRepresentation.h"
-//#include "CalendarModule.h"
+#include "CalendarModule.h"
 //#include "GregorianCalendarModule.h"
 
 extern BList listOfCalendarModules;
 
 class CalendarModule;
 class GregorianCalendar;
+
+// Message constants
+const uint32	kMonthChanged 		= 'MONT';
+const uint32	kYearChanged		= 'YEAR';
+const uint32	kOpenDateSelector 	= 'DATE';
+const uint32	kTextModified		= 'MODI';
 
 /*!	\enum	DmyOrder
  *	\brief	Defines the order of the elements in the control string.
@@ -59,20 +66,26 @@ class CalendarControl
 	public BView
 {
 private:
-	BTextControl* textControl;
-	BTextView* textView;
+	BStringView* label;
+	BMenuField* menuField;
+//	BTextView* textView;
 	TimeRepresentation representedTime;
-	BButton* openMenuButton;
+//	BButton* openMenuButton;
 	BMenu* dateSelector;
+//	BMenuBar* openMenuButton;
 	CalendarModule* calModule;
 	char separator;
 	DmyOrder orderOfElements;
+	void UpdateTargets(BView* in);
 
 protected:
-	void Init();
-	void CreateMenu(void);
+	virtual void Init();
+	virtual void CreateMenu(void);
+	virtual BMenu* CreateMonthsMenu(map<int, DoubleNames> &listOfMonths);
+	virtual BMenu* CreateYearsMenu(int localYear);
 	
-	BString BuildDateRepresentationString(bool useLongMonthNames = true);
+	
+	virtual BString BuildDateRepresentationString(bool useLongMonthNames = true);
 
 public:
 	CalendarControl(BRect frame,
@@ -91,6 +104,8 @@ public:
 	inline virtual void SelectTime(const TimeRepresentation &toSet) {};
 	
 	virtual void MakeFocus(bool focused = true);
+	
+	virtual void MessageReceived (BMessage* in);
 };
 // <-- end of class CalendarControl
 
