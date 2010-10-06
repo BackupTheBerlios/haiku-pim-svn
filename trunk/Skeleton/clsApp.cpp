@@ -5,7 +5,7 @@ clsApp::clsApp()
 	BApplication(ApplicationSignature),
 	iMainWindow(NULL)
 {
-  iMainWindow = new clsMainWindow("Main Window");
+  iMainWindow = new clsMainWindow("EventEditor");
   if (iMainWindow != NULL)
 		iMainWindow->Show();
 	else

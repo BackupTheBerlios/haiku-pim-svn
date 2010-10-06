@@ -1,6 +1,12 @@
+#include <String.h>
+#include <Alert.h>
+#include <Point.h>
+
 #include "clsMainWindow.h"
 #include "CalendarControl.h"
 #include "GregorianCalendarModule.h"
+
+
  
 MainView::MainView(BRect frame) 
 	:
@@ -218,35 +224,19 @@ BBitmap* MainView::CreateIcon(const rgb_color colorIn)
 	return toReturn;
 }
 
-struct cha {
-	char a;
-	char b;
-	char c;
-	char d;	
-};
-
-union u {
-	uint32 i;
-	cha ch;
-};
-
 void clsMainWindow::MessageReceived(BMessage * Message)
 {
-	u a;
-	a.i = (uint32)Message->what;
-	
-	
-
-	BString sb, mess;
-	mess << (char)a.ch.d << ' '  << (char)a.ch.c << ' ' << (char)a.ch.b << ' '  << (char)a.ch.a;
-	sb << "Got message inside BeApp! " << mess;
-	BAlert *al = new BAlert("Aaa", sb.String(), "Ok");
-	if (al) {
-		al->Go();
-	}
-	
+	BAlert* al;
+	BString sb;
+	BPoint pt;
 	switch(Message->what)
 	{
+/*		case (B_MOUSE_DOWN):
+			pt = Message->FindPoint("where");
+			sb << "Mouse down at " << pt.x << " and  " << pt.y;
+			al = new BAlert("AAA", sb.String(), "Ok");
+			if (al) al->Go();
+*/	
 		default:
 		  BWindow::MessageReceived(Message);
 		  break;

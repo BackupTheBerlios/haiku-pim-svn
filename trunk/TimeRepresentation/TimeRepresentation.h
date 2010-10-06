@@ -15,15 +15,15 @@ extern BList listOfCalendarModules;
 	\brief	The Calendar Module allows to check what day of week is a local date.
 	\details	Used also in the Rule for defining a weekly repeating pattern.
 */
-const uint32	kSunday		= 0x00000001;
-const uint32	kMonday		= 0x00000002;
-const uint32	kTuesday	= 0x00000004;
-const uint32	kWednesday	= 0x00000008;
-const uint32	kThursday	= 0x00000010;
-const uint32	kFriday		= 0x00000020;
-const uint32	kSaturday	= 0x00000040;
-const uint32	k7DaysWeek	= 0x0000007F;
-const uint32	kInvalid	= 0x80000000;
+const uint32	kSunday		= 1;
+const uint32	kMonday		= 2;
+const uint32	kTuesday	= 3;
+const uint32	kWednesday	= 4;
+const uint32	kThursday	= 5;
+const uint32	kFriday		= 6;
+const uint32	kSaturday	= 7;
+const uint32	k7DaysWeek	= 10;
+const uint32	kInvalid	= 0xFF;
 
 // #include "CalendarModule.h"
 class CalendarModule;

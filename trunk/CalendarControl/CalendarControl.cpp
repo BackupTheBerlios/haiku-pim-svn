@@ -2,6 +2,7 @@
 //#include "TimeRepresentation.h"
 
 #include <InterfaceKit.h>
+#include <OS.h>
 #include <String.h>
 #include <Size.h>
 #include <Application.h>
@@ -11,6 +12,7 @@
 #include <SpaceLayoutItem.h>
 #include <GroupLayout.h>
 #include <GroupLayoutBuilder.h>
+#include <stdio.h>
 //#include "CalendarModule.h"
 //#include "GregorianCalendarModule.h"
 
@@ -18,24 +20,131 @@
 #define		SPACING			2
 #define		YEARS_UP_AND_DOWN	5
 
-const uint32 firstDayOfEveryWeek = kSunday;
+rgb_color weekdayNameColor = {0x80, 0x80, 0x80, 255};
+rgb_color weekendNameColor = {255, 0x80, 0x80, 255};
+rgb_color weekendDateColor = {255, 0x0, 0x0, 255};
+rgb_color todayBackColor = {0, 0, 0x80, 255};
 
 
 /*==========================================================================
 **			IMPLEMENTATION OF CLASS DayItem
 **========================================================================*/
+DayItem::DayItem(BString date, BMessage* message)
+	:
+	BMenuItem(date.String(), message),
+	isToday(false),
+	isServiceItem(false)
+{ 
+	fFrontColor = ui_color(B_MENU_ITEM_TEXT_COLOR);
+	fBackColor = ui_color(B_MENU_BACKGROUND_COLOR);
+	invocationMessage = message;
+	targetHandler = be_app;
+}
 
+DayItem::DayItem(const char* date, BMessage* message) 
+	:
+	BMenuItem(date, message),
+	isToday(false),
+	isServiceItem(false)
+{
+	fFrontColor = ui_color(B_MENU_ITEM_TEXT_COLOR);
+	fBackColor = ui_color(B_MENU_BACKGROUND_COLOR);
+	invocationMessage = message;
+	targetHandler = be_app;
+}
 
+void DayItem::SetFrontColor(rgb_color in) 
+{
+	fFrontColor = in; 
+}
+/*
+void DayItem::GetContentSize(float *width, float* height) {
+	if (!width || !height || !Menu()) { return; }	
+	BFont font;
+	Menu()->GetFont(&font);
+	font.GetHeight((font_height*)height);
+	*width = font.StringWidth(this->Label());
+}
+// <-- end of function DayItem::GetContentSize.
+*/
+void DayItem::DrawContent() {
+	BMenu* menu = this->Menu();
+	if (! menu) { return; }	// Nothing to do if not attached to menu
+	rgb_color backColor = menu->LowColor(),
+				frontColor = menu->HighColor();				
+	
+	menu->SetLowColor(fBackColor);
+	menu->SetHighColor(fFrontColor);
+	BRect frame = this->Frame(); 
+	frame.InsetBySelf(-1, -1);
+	frame.OffsetBySelf(-1, -1);
+	menu->StrokeRect(frame, B_SOLID_LOW);
+	BMenuItem::DrawContent();
+	menu->SetLowColor(backColor);
+	menu->SetHighColor(frontColor);	
+}
+
+void DayItem::SetTarget(BHandler* target) {
+	if (target) {
+		this->targetHandler = target;
+	}
+	BMenuItem::SetTarget(target);	
+}
+
+void DayItem::Fire(void) {
+	if (invocationMessage && targetHandler) {
+//		BMessenger mess(targetHandler);
+		if (be_app->Looper()->Lock()) {
+//			be_app->SendMessage(invocationMessage);
+			be_app->Looper()->Unlock();
+		}
+	}
+}
 
 /*==========================================================================
 **			IMPLEMENTATION OF CLASS MonthMenu
 **========================================================================*/
-MonthMenu::MonthMenu(BRect frame)
+MonthMenu::MonthMenu(const char *name, float width, float height)
 	:
-	BMenu("datesMenu", frame.Width(), frame.Height())
+	BMenu(name, width, height)
 {
 	
 }
+
+MonthMenu::~MonthMenu() {}
+
+
+void MonthMenu::MouseDown(BPoint where) {
+	BMenu::MouseDown(where);
+	int i=0, limit=this->CountItems();
+	BMenuItem* item = NULL;
+	DayItem* dayItem = NULL;
+	for (; i<limit; ++i) {
+		item = this->ItemAt(i);
+		if (item->Frame().Contains(where)) {
+			break;
+		}		
+	}
+	
+	if ( (item) && (dayItem = dynamic_cast<DayItem*>(item))) {
+		if (dayItem->IsServiceItem()) {
+			BAlert* al = new BAlert("A", "Inside!", "Ok");
+//			if (al) al->Go();
+			bool en = dayItem->IsEnabled();
+			dayItem->SetEnabled(false);
+//			BMenu::MouseDown(where);			
+			dayItem->SetEnabled(en);
+			dayItem->Fire();
+			Track(true);
+			return;
+		}
+	} else {
+		BMenu::MouseDown(where);
+	}
+
+	return;
+}
+
 
 /*==========================================================================
 **			IMPLEMENTATION OF CLASS CalendarControl
@@ -53,28 +162,44 @@ CalendarControl::CalendarControl(BRect frame,
 				B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP_BOTTOM,
 				B_NAVIGABLE | B_WILL_DRAW | B_FRAME_EVENTS ),	
 	label(NULL),
-	menuField(NULL)
+	dateLabel(NULL)
 {
-	// First, create the TextControl that is the main part of the UI.
+	// Preferences to be set.
+	this->weekends.AddItem((void*)kWednesday);
+	this->weekends.AddItem((void*)kSunday);
+	this->firstDayOfEveryWeek = kTuesday;
+	
+	
 	frame = this->Bounds();
 	label = new BStringView(BRect(0,0,1,1), 
 							"label", 
 							labelIn);
 	if (!label) { /* Panic! */ exit(1); }
+	label->ResizeToPreferred();
+	
+	dateLabel = new BStringView(BRect(0,0,1,1), 
+							"dateLabel", 
+							NULL);
+	if (!dateLabel) { /* Panic! */ exit(1); }
 	
 	BRect stringViewFrame = label->Frame();
 	
 	BPoint topLeftCorner = stringViewFrame.RightTop();
-	BSize size(frame.Width()-stringViewFrame.Width(), stringViewFrame.Height());
+	BSize size(30, stringViewFrame.Height()+SPACING);
 	
 	Init();	// Initialize the day representation and define the menus
 	
-	menuField = new BMenuField(BRect(topLeftCorner, size),
-								"menu",
-								"",
-								dateSelector,
-								true,
-								B_FOLLOW_LEFT | B_FOLLOW_TOP);
+	menuBar = new BMenuBar(BRect(topLeftCorner, size),
+								"menuBar",
+								B_FOLLOW_RIGHT | B_FOLLOW_TOP,
+								B_ITEMS_IN_ROW,
+								false);
+	if (! menuBar) {
+		// Panic!
+		exit(1);
+	}
+	menuBar->SetBorder(B_BORDER_EACH_ITEM);
+	menuBar->AddItem(dateSelector);
 
 	UpdateText();
 	
@@ -84,59 +209,62 @@ CalendarControl::CalendarControl(BRect frame,
 		// Panic! 
 		exit(1); 
 	}
-	lay->SetInsets(5, 0, 5, 0);
+	lay->SetInsets(0, 0, 0, 0);
 	lay->SetSpacing(10);
 	BView::SetLayout(lay);
 	
+	BLayoutItem* layoutItem;
+	BSize size1;
 	
-	lay->AddView(label);
-	lay->AddView(menuField);
-	(menuField->MenuBar())->SetBorder(B_BORDER_EACH_ITEM);
-//	(menuField->MenuBar())->SetAlignment(B_FOLLOW_LEFT);
-	(menuField->MenuBar())->ResizeTo(30, menuField->MenuBar()->Bounds().Height());
-	menuField->SetDivider(be_plain_font->StringWidth(menuField->Label())+SPACING);
+	layoutItem = lay->AddView(label);
+	size1.SetWidth(layoutItem->Frame().Width());
+	size1.SetHeight(layoutItem->Frame().Height());
+	layoutItem->SetExplicitPreferredSize(size1);
+	layoutItem->SetExplicitAlignment(BAlignment(B_ALIGN_LEFT, B_ALIGN_TOP));
+	layoutItem = lay->AddView(dateLabel);
+	layoutItem->SetExplicitAlignment(BAlignment(B_ALIGN_LEFT, B_ALIGN_TOP));
+	layoutItem = lay->AddView(menuBar);	
+	layoutItem->SetExplicitAlignment(BAlignment(B_ALIGN_RIGHT, B_ALIGN_TOP));
+	size.SetHeight(size.Height());
+	layoutItem->SetExplicitMaxSize(size);
+	
 
-
-/*	AddChild(BGroupLayoutBuilder(B_HORIZONTAL)
-		.Add(label)
-		.AddStrut(10)
-		.Add(menuField)
-	);
-*/
 }
 
 /*!	\function		CalendarControl::AttachedToWindow
 	\brief			Sets up the view color and calls this view's children.
 */
 void CalendarControl::AttachedToWindow() {
+	
+	// Get the view color of the father
 	if (Parent()) {
 		SetViewColor(Parent()->ViewColor());
 	}
+	// Attach to window both current view and all of its children
 	BView::AttachedToWindow();
-/*	if (textControl) {
-		textControl->AttachedToWindow();
-	}
-	if (openMenuButton) {
-//		openMenuButton->AttachedToWindow();
-	}
-*/	
+	
+	// This view should respond to the messages - thus the Looper must know it
 	BLooper* looper = (BLooper*)Looper();
 	if (looper && looper->LockLooper()) {
 		looper->AddHandler((BHandler*) this);
-		BAlert *al = new BAlert("Aaa", "Added successfully", "Ok");
-		if (al) {
-			al->Go();
-		}
 		looper->UnlockLooper();
 	}
-	BMenu* men;
+	
+	// Update targets of all children
+	BMenu* men; BMenuItem* item;
 	if (dateSelector) {
 		for (int i=0; i<dateSelector->CountItems(); i++) {
 			if (men = dateSelector->SubmenuAt(i)) {
 				men->SetTargetForItems(this);	
+			} else {
+				if (item = dateSelector->ItemAt(i)) {
+					item->SetTarget(this);	
+				}	
 			}
 		}	
 	}
+
+//	UpdateTargets(this);
 }
 // <-- end of function CalendarControl::AttachedToWindow
 
@@ -177,7 +305,7 @@ void CalendarControl::UpdateText() {
 	BRect frame;
 
 	if (!calModule) { return; }
-	if (!menuField) { /* Nothing to update! */ return; }
+	if (!dateLabel) { /* Nothing to update! */ return; }
 		
 	// We need to calculate the place required for the date representation.
 	BFont textViewFont(be_plain_font);
@@ -187,24 +315,7 @@ void CalendarControl::UpdateText() {
 	longStringLength = textViewFont.StringWidth(builderLong.String());
 	shortStringLength = textViewFont.StringWidth(builderShort.String());
 	
-	BString sb;
-	sb << "Long string: \"" << builderLong;
-	sb << "\" and short string is " << builderShort;
-	BAlert *al = new BAlert("Aaa", sb.String(), "Ok");
-	if (al) {
-//		al->Go();
-	}
-/*	
-	frame = textView->Frame();
-	if ((frame.right - frame.left) > longStringLength) {
-		textView->SetText(builderLong.String());
-	} else {
-		textView->SetText(builderShort.String());
-	}
-*/
-	menuField->SetLabel(builderLong.String());
-	menuField->SetDivider(longStringLength);
-//	menuField->ResizeToPreferred();
+	dateLabel->SetText(builderLong.String());
 }
 // <-- end of function CalendarControl::UpdateText
 
@@ -276,18 +387,24 @@ BString CalendarControl::BuildDateRepresentationString(bool useLongMonthNames)
  */
 CalendarControl::~CalendarControl(void)
 {
-	if (!menuField) {
-		RemoveChild(menuField);
-		delete menuField;
-		menuField = NULL;
+	if (!menuBar) {
+		RemoveChild(menuBar);
+		delete menuBar;
+		menuBar = NULL;
 	}
 	if (!label) {
 		RemoveChild(label);
 		delete label;
 		label = NULL;
 	}
+	if (!dateLabel) {
+		RemoveChild(dateLabel);
+		delete dateLabel;
+		dateLabel = NULL;
+	}
+//	this->weekends.MakeEmpty();
 }
-// <-- end of destructor fot the CalendarControl
+// <-- end of destructor for the CalendarControl
 
 /*!	\function		CalendarControl::FrameResized
  *	\brief			This function resizes the control to the new size.
@@ -297,33 +414,7 @@ CalendarControl::~CalendarControl(void)
 void CalendarControl::FrameResized(float width, float height) {
 	// Updating the BView.
 	BView::FrameResized(width, height);
-/*	
-	// First, resizing the BTextControl object.
-	BRect oldControlFrame = textControl->Bounds(),
-		oldTextViewFrame = textView->Bounds();
-	// 6*SPACING is a result of trial and error.
-	float newDelta = width - oldControlFrame.Width() - BUTTON_WIDTH - 6*SPACING;
-	textControl->ResizeTo(oldControlFrame.Width() + newDelta, 
-						  oldControlFrame.Height());
-						  
-	// Now we need to resize the BTextView inside of BTextControl	
-	textView->ResizeTo(oldTextViewFrame.Width() + newDelta, 
-					oldTextViewFrame.Height());
-					
-	// The last thing is to update the position of the BButton
-	BPoint textViewRightTopCorner = (textView->Frame()).RightTop();
-	textViewRightTopCorner.x += SPACING*2;
-	textViewRightTopCorner.y = SPACING ;
-	openMenuButton->MoveTo(textViewRightTopCorner);
-	
-	// Redrawing the whole content of the BView
-	UpdateText();
-	textControl->Invalidate();
-	textView->Draw(textView->Bounds());
-	openMenuButton->Draw(openMenuButton->Bounds());
-	textView->Invalidate();
-	openMenuButton->Invalidate();
-*/
+//	menuBar->ResizeTo(30, menuBar->Bounds().Height());
 }
 // <-- end of function CalendarControl::FrameResized
 
@@ -354,7 +445,7 @@ void CalendarControl::CreateMenu(void) {
 			this->representedTime.tm_year,
 			this->representedTime.tm_mon);
 	map<int, DoubleNames> monthNames = calModule->GetMonthNamesForLocalYear(
-			this->representedTime.tm_year);
+			this->representedTime.tm_year);			
 	
 	int daysInMonth = dayNames.size();
 	int daysInWeek = (int )calModule->GetDaysInWeek();
@@ -374,7 +465,7 @@ void CalendarControl::CreateMenu(void) {
 	tempDay.tm_mday = 1;
 	
 	int firstDayOfMonthWD = calModule->GetWeekDayForLocalDateAsInt(tempDay);
-	int firstDayOfWeek = calModule->GetWeekDayForLocalDateAsInt(firstDayOfEveryWeek);
+	int firstDayOfWeek = GetFirstDayOfWeek();
 	
 	int firstDayOfMonthInFirstWeek =
 		(firstDayOfMonthWD + daysInWeek - firstDayOfWeek) % daysInWeek;
@@ -404,14 +495,13 @@ void CalendarControl::CreateMenu(void) {
 								// then there are days in the month
 	int width1 = (int )(daysInWeek*fixedFont.StringWidth(day.String()));
 	int width2 = (int )plainFont.StringWidth(longestMonth.String()) +
-		(int )plainFont.StringWidth("2010");
+		(int )plainFont.StringWidth("0000");
 		
 	rectangle.left = 0;
 	width1 > width2 ? rectangle.right = width1 : rectangle.right = width2;
 	
 	
-	BString sb;
-	
+	BString sb;	
 	sb.Truncate(0);
 	
 	// Now "rectangle" has enough space to accomodate the whole set of items.
@@ -419,49 +509,202 @@ void CalendarControl::CreateMenu(void) {
 	
 	// This is the items we're going to use.
 	BMessage* messageOfItem = NULL;
-	BMenuItem* itemToAdd = NULL;
+	DayItem* itemToAdd = NULL;
 	BPoint topLeftCorner;
 	BSize rectSize(0, 0);
-	topLeftCorner.x = topLeftCorner.y = 0;
 	
 	// This is the menu we're adding items to.
-	dateSelector = new BMenu("⇩",
+/*	dateSelector = new MonthMenu("⇩",
 							 rectangle.Width(),
 							 rectangle.Height());
+*/
 
-/*	dateSelector = new BMenu("⇩",
-							 400,
-							 400);
-*/							 
+	dateSelector = new MonthMenu("⇩", 800, 800);
+	
 	// Sanity check
 	if (!dateSelector) {
 		// Panic!
 		exit(1);
 	}
 	
+	dateSelector->SetViewColor(ui_color(B_MENU_BACKGROUND_COLOR));
 	
+	dateSelector->SetFont(&fixedFont);
 	
-	// Build the list of months and year.
-	BMenu* listOfMonths = CreateMonthsMenu(monthNames);
-
-	// Add the list of months
 	topLeftCorner.x = SPACING+5;
-	topLeftCorner.y = SPACING;
+	topLeftCorner.y = SPACING;	
+	
+	// Build the list of months.
+	BMenu* listOfMonths = CreateMonthsMenu(monthNames);
+	
+	//-----------------------------------------------------
+	// FIRST ROW.
+	//-----------------------------------------------------
+	
+	// Add the item to scroll list of months back
+	messageOfItem = new BMessage(kMonthDecreased);
+	itemToAdd = new DayItem("‹", messageOfItem);
+	if (!itemToAdd) { /* Panic! */ exit(1); }
+	rgb_color color;
+	color.red = 0; color.green = 0; color.blue = 255; color.alpha = 255;
+	itemToAdd->SetFrontColor(color);
+	itemToAdd->SetBackColor(ui_color(B_MENU_BACKGROUND_COLOR));
+	itemToAdd->SetServiceItem(true);
+	itemToAdd->SetEnabled(true);
+	rectSize.SetHeight((float)fixedFont.Size());
+	rectSize.SetWidth((float)fixedFont.StringWidth("‹"));
+	dateSelector->AddItem(itemToAdd, 
+				BRect(topLeftCorner, rectSize));
+
+	topLeftCorner.x += (float)fixedFont.StringWidth("‹") + SPACING;
+	
+	// Add the list of months	
 	rectSize.SetHeight((float)plainFont.Size());
 	rectSize.SetWidth((float)plainFont.StringWidth(longestMonth.String()));
 	dateSelector->AddItem(listOfMonths, 
-					BRect(topLeftCorner, rectSize)
-				  );
+					BRect(topLeftCorner, rectSize) );
+	topLeftCorner.x += SPACING + rectSize.Width();	
+	
+	// Add the item to scroll list of months forward.
+	messageOfItem = new BMessage(kMonthIncreased);
+	itemToAdd = new DayItem("›", messageOfItem);
+	if (!itemToAdd) { /* Panic! */ exit(1); }
+	color.red = 0; color.green = 0; color.blue = 255; color.alpha = 255;
+	itemToAdd->SetFrontColor(color);
+	itemToAdd->SetBackColor(ui_color(B_MENU_BACKGROUND_COLOR));
+	itemToAdd->SetServiceItem(true);
+	itemToAdd->SetEnabled(true);
+	rectSize.SetHeight((float)fixedFont.Size());
+	rectSize.SetWidth((float)fixedFont.StringWidth("›"));
+	dateSelector->AddItem(itemToAdd, 
+				BRect(topLeftCorner, rectSize));
+
+	topLeftCorner.x += (float)fixedFont.StringWidth("›") + 10 + SPACING;
+				
+	// Add the item to scroll list of years down.
+	messageOfItem = new BMessage(kYearDecreased);
+	itemToAdd = new DayItem("‒", messageOfItem);
+	if (!itemToAdd) { /* Panic! */ exit(1); }
+	color.red = 0; color.green = 0; color.blue = 255; color.alpha = 255;
+	itemToAdd->SetFrontColor(color);
+	itemToAdd->SetBackColor(ui_color(B_MENU_BACKGROUND_COLOR));
+	itemToAdd->SetServiceItem(true);
+	itemToAdd->SetEnabled(true);
+	rectSize.SetHeight((float)fixedFont.Size());
+	rectSize.SetWidth((float)fixedFont.StringWidth("‒"));
+	dateSelector->AddItem(itemToAdd, 
+				BRect(topLeftCorner, rectSize));
+
+	topLeftCorner.x += (float)fixedFont.StringWidth("‒") + SPACING;
+	
 	// Add year
 	sb.Truncate(0);
 	sb << representedTime.tm_year;
-	topLeftCorner.x += SPACING + rectSize.Width();	
+	
 	rectSize.SetWidth((float )plainFont.StringWidth(sb.String()));
 	BMenu* listOfYears = CreateYearsMenu(this->representedTime.tm_year);	
 	dateSelector->AddItem(listOfYears,
 					BRect(topLeftCorner, rectSize));
+	topLeftCorner.x += (float)plainFont.StringWidth("0000") + SPACING;
+
+	// Add item to scroll list of years up.
+		// Add the item to scroll list of years down.
+	messageOfItem = new BMessage(kYearIncreased);
+	itemToAdd = new DayItem("+", messageOfItem);
+	if (!itemToAdd) { /* Panic! */ exit(1); }
+	color.red = 0; color.green = 0; color.blue = 255; color.alpha = 255;
+	itemToAdd->SetFrontColor(color);
+	itemToAdd->SetBackColor(ui_color(B_MENU_BACKGROUND_COLOR));
+	itemToAdd->SetServiceItem(true);
+	itemToAdd->SetEnabled(true);
+	rectSize.SetHeight((float)fixedFont.Size());
+	rectSize.SetWidth((float)fixedFont.StringWidth("+"));
+	dateSelector->AddItem(itemToAdd, 
+				BRect(topLeftCorner, rectSize));
+
+	//-----------------------------------------------------
+	// SECOND ROW.	WEEKDAY NAMES
+	//-----------------------------------------------------
+	rectSize.SetHeight(fixedFont.Size()+SPACING);
+	rectSize.SetWidth(fixedFont.StringWidth("WW")+SPACING);
+	float rowHeight = rectSize.Height()+SPACING;
+	float itemWidth = rectSize.Width()+ 5 +SPACING;
 	
+	printf("Item width is %d.\n", (int )itemWidth);
 	
+	topLeftCorner.x = SPACING; 
+	topLeftCorner.y = rowHeight+SPACING;
+	
+	map<uint32, DoubleNames> weekdayNames = calModule->GetWeekdayNames();
+	uint32 limit = (uint32)calModule->GetDaysInWeek();
+	uint32 curDay;
+	
+	for (uint32 i = firstDayOfWeek; i < limit+firstDayOfWeek; ++i) {	
+		curDay = ((i-1)%limit) + 1;
+		
+		itemToAdd = new DayItem(weekdayNames[curDay].shortName.String(), NULL);
+		printf("Printing string %s at offset %d.\n", 
+			weekdayNames[curDay].shortName.String(), 
+			(int )topLeftCorner.x);
+		if (!itemToAdd) { /* Panic! */ exit(1); }
+		itemToAdd->SetServiceItem(true);
+		if (weekends.HasItem((void*)i) ||
+			weekends.HasItem((void*)(i%daysInWeek))) 
+		{
+			itemToAdd->SetFrontColor(weekendNameColor);
+		} else {
+			itemToAdd->SetFrontColor(weekdayNameColor);
+		}
+		itemToAdd->SetEnabled(false);
+		itemToAdd->SetBackColor(ui_color(B_MENU_BACKGROUND_COLOR));
+		dateSelector->AddItem(itemToAdd, 
+			BRect(topLeftCorner, rectSize));
+		topLeftCorner.x += itemWidth + SPACING;		
+	}
+	topLeftCorner.x = SPACING;	
+	
+	//-----------------------------------------------------------------------
+	// THIRD ROW AND DOWN - THE WEEK INDIVIDUAL DAYS.
+	//----------------------------------------------------------------------
+	uint32 currentWeekday = (uint32)firstDayOfMonthInFirstWeek;
+	topLeftCorner.x += (itemWidth+SPACING) * firstDayOfMonthInFirstWeek;
+	topLeftCorner.y += rowHeight + SPACING;
+	for (int day=1; day <= daysInMonth; ++day) {
+		messageOfItem = new BMessage(kTodayModified);
+		if (!messageOfItem) { /* Panic! */ exit(1); }
+		messageOfItem->AddInt32("Date", day);
+
+		sb.Truncate(0);
+		char padding = ' ';	// <-- For proper aligning of the items
+		day < 10 ? sb << padding << day : sb << day;
+		itemToAdd = new DayItem(sb.String(), messageOfItem);
+		if (!itemToAdd) { /* Panic! */ exit(1); }
+		itemToAdd->SetEnabled(true);
+		itemToAdd->SetServiceItem(false);
+		messageOfItem->AddPointer("Item", &itemToAdd);
+		if (weekends.HasItem((void*)((firstDayOfEveryWeek+currentWeekday)%daysInWeek)) ||
+		    weekends.HasItem((void*)((firstDayOfEveryWeek+currentWeekday))))
+		{
+			itemToAdd->SetFrontColor(weekendDateColor);
+		} else {
+			itemToAdd->SetFrontColor(ui_color(B_MENU_ITEM_TEXT_COLOR));
+		}
+		if (representedTime.tm_mday == day) {
+			itemToAdd->SetBackColor(todayBackColor);
+			itemToAdd->SetMarked(true);
+		}
+		dateSelector->AddItem(itemToAdd,
+			BRect(topLeftCorner, rectSize));
+		
+		topLeftCorner.x += itemWidth + SPACING;
+			
+		++currentWeekday;
+		if (currentWeekday%daysInWeek == 0) {
+			topLeftCorner.x = SPACING;
+			topLeftCorner.y += rowHeight+SPACING;
+			currentWeekday = 0;
+		}	
+	}
 }
 // <-- end of function CalendarControl::CreateMenu
 
@@ -477,9 +720,12 @@ BMenu* CalendarControl::CreateMonthsMenu(map<int, DoubleNames> &listOfMonths) {
 	BMenuItem* item = NULL;
 	BString monthName;
 	BMenu* toReturn = new BMenu("Months list");
+	
 	if (!toReturn) { /* Panic! */ exit(1); }
 	toReturn->SetLabelFromMarked(true);
 	toReturn->SetRadioMode(true);
+	BFont font(be_plain_font);
+	toReturn->SetFont(&font, B_FONT_FAMILY_AND_STYLE);
 		
 	int limit = listOfMonths.size();
 	
@@ -519,7 +765,8 @@ BMenu* CalendarControl::CreateYearsMenu(int yearIn) {
 	if (!toReturn) { /* Panic! */ exit(1); }
 	toReturn->SetLabelFromMarked(true);
 	toReturn->SetRadioMode(true);
-	
+//	BFont font(be_plain_font);
+//	toReturn->SetFont(&font, B_FONT_FAMILY_AND_STYLE);
 	for (int i = yearIn-YEARS_UP_AND_DOWN; 
 			i <= yearIn+YEARS_UP_AND_DOWN; 
 			++i) 
@@ -539,67 +786,191 @@ BMenu* CalendarControl::CreateYearsMenu(int yearIn) {
 		toReturn->AddItem(item);
 		yearName.Truncate(0);
 	}
-//	toReturn->SetTargetForItems(item);
+	toReturn->SetTargetForItems(this);
 	return toReturn;
 }
 // <-- end of function CalendarControl::CreateYearsMenu
 
-void CalendarControl::UpdateTargets(BView* in) {
-	int i = 0;
-	for (; i<in->CountChildren(); ++i) {
-		BView* child = in->ChildAt(i);
-		BInvoker* inv = dynamic_cast<BInvoker*>	(child);
-		if (inv) {
-			inv->SetTarget(this);
-		}
-		UpdateTargets(child);
-	}
+void CalendarControl::UpdateTargets(BMenu* in) {	
+	dateSelector->SetTargetForItems((BHandler*)this);	
 }
-
-struct cha {
-	char a;
-	char b;
-	char c;
-	char d;	
-};
-
-union u {
-	uint32 i;
-	cha ch;
-};
 
 /*!	\function		CalendarControl::MessageReceived
  *	\brief			Main function in this control.
  *	\param[in]	in	The BMessage which was sent to this control.
  */
 void CalendarControl::MessageReceived(BMessage* in) {
-	int month, year;
+	int8 month;
+	int year;
+	BMessage reply(B_REPLY);
 	if (!in) { return; }	// Sanity check
-	
-	u a;
-	a.i = (uint32)in->what;
 
 	BString sb;
-	sb << "Got message inside CalControl! " << a.ch.a << a.ch.b << a.ch.c << a.ch.d;
-	BAlert *al = new BAlert("Aaa", sb.String(), "Ok");
-	if (al) {
-		al->Go();
-	}
 	
-	switch (in->what) {
+	BAlert *al;
+	map<int, DoubleNames> monthNames = calModule->GetMonthNamesForLocalYear(
+			this->representedTime.tm_year);
+	map<int, BString> dayNames;
+	BMenuItem* item = NULL;
+	DayItem* dayItem1 = NULL;
+	BMenu* menu = NULL;
+	BMessage* mes = NULL;
+	BPoint point;
+	uint32 command = in->what;
+	bool changePerformed = false;
+	int prevYear = 0;
+	switch (command) {
 		case (kMonthChanged):
-			month = in->FindInt8("Month");
+			in->FindInt8("Month", &month);
 			this->representedTime.tm_mon = month;
 			UpdateText();
-			break;
-		case (kYearChanged):
-			year = in->FindInt32("Year");
-			this->representedTime.tm_year = year;
+			menuBar->RemoveItem(dateSelector);
+			delete dateSelector;
+			CreateMenu();
+			menuBar->AddItem(dateSelector);
+			UpdateTargets(dateSelector);
+			return;
+			break;			
+		case (kTodayModified):
+			sb.Truncate(0); 
+			representedTime.tm_mday < 10 ? 
+				sb << ' ' << representedTime.tm_mday :
+				sb << representedTime.tm_mday;
+			
+			dayItem1 = dynamic_cast<DayItem*>(dateSelector->FindItem(sb.String()));
+			if (dayItem1) {				
+				dayItem1->SetBackColor(ui_color(B_MENU_BACKGROUND_COLOR));
+				dayItem1->SetMarked(false);
+			}
+			sb.Truncate(0);
+			if (B_OK != in->FindInt32("Date", (int32*)&prevYear) ||
+				B_OK != in->FindPointer("Item", (void**)&dayItem1)) {
+				// Panic!
+				exit(6);
+			}
+			prevYear < 10 ? 
+				sb << ' ' << prevYear :
+				sb << prevYear;
+			dayItem1 = dynamic_cast<DayItem*>(dateSelector->FindItem(sb.String()));
+			if (dayItem1) {
+				((DayItem*)dayItem1)-> SetBackColor(todayBackColor);
+				printf("Set color to item %s.\n", dayItem1->Label());
+				((BMenuItem*)dayItem1)->SetMarked(true);
+			}
+			this->representedTime.tm_mday = prevYear;
+			// Get list of dates after update of the month and year
+			dayNames = calModule->GetDayNamesForLocalYearMonth(
+				this->representedTime.tm_year,
+				this->representedTime.tm_mon);
+			if (representedTime.tm_mday > dayNames.size()) {
+				representedTime.tm_mday = dayNames.size();	
+			}
+			dateSelector->Invalidate();			
 			UpdateText();
+			UpdateTargets(dateSelector);
+			return;
+			break;
+		case (kYearIncreased):
+		case (kYearDecreased):
+		case (kYearChanged):
+			prevYear = this->representedTime.tm_year;
+			if (command == kYearIncreased) {				
+				++(this->representedTime).tm_year;
+			} else if (command == kYearDecreased) {
+				--(this->representedTime).tm_year;
+			} else {
+				year = in->FindInt32("Year");
+				prevYear = year;
+				this->representedTime.tm_year = year;
+				in->RemoveName("Year");
+			};
+			// Get list of dates after update of the month and year
+			dayNames = calModule->GetDayNamesForLocalYearMonth(
+				this->representedTime.tm_year,
+				this->representedTime.tm_mon);
+			if (representedTime.tm_mday > dayNames.size()) {
+				representedTime.tm_mday = dayNames.size();	
+			}
+			UpdateText();
+//			UpdateYearsMenu(prevYear, representedTime.tm_year);
+			menuBar->RemoveItem(dateSelector);
+			delete dateSelector;
+			CreateMenu();
+			menuBar->AddItem(dateSelector);
+			UpdateTargets(dateSelector);
+			return;
+			break;
+		case (kMonthDecreased):
+		case (kMonthIncreased):
+			sb.Truncate(0);
+			sb << monthNames[representedTime.tm_mon].longName;
+			if (command == kMonthDecreased) {
+				--representedTime.tm_mon;				
+				if (representedTime.tm_mon == 0) {
+					changePerformed = true;
+					prevYear = representedTime.tm_year;
+					--representedTime.tm_year;
+					monthNames = calModule->GetMonthNamesForLocalYear(
+						this->representedTime.tm_year);
+					representedTime.tm_mon = monthNames.size();
+				}
+			} else {
+				++representedTime.tm_mon;
+				if (representedTime.tm_mon > monthNames.size() ) {
+					changePerformed = true;
+					representedTime.tm_mon = 1;
+					prevYear = representedTime.tm_year;
+					++representedTime.tm_year;
+					monthNames = calModule->GetMonthNamesForLocalYear(
+						this->representedTime.tm_year);
+				}
+			}
+			// Get list of dates after update of the month and year
+			dayNames = calModule->GetDayNamesForLocalYearMonth(
+				this->representedTime.tm_year,
+				this->representedTime.tm_mon);
+			if (representedTime.tm_mday > dayNames.size()) {
+				representedTime.tm_mday = dayNames.size();	
+			}
+			UpdateText();
+			menuBar->RemoveItem(dateSelector);
+			delete dateSelector;
+			CreateMenu();
+			menuBar->AddItem(dateSelector);
+			UpdateTargets(dateSelector);
+			return;
 			break;
 		case (kOpenDateSelector):	
+			if (al) al->Go();
 		default:
 			BView::MessageReceived(in);
 	}
+	in->SendReply(&reply);
+//	BView::MessageReceived(in);
 }
 // <-- end of function CalendarControl::MessageReceived
+
+void CalendarControl::UpdateYearsMenu(int prevYear, int curYear) {
+	BMenuItem* item; BMenu* menu;
+	BString sb;
+	BRect fr;
+	sb << prevYear;
+	if (!dateSelector) return;
+	if ( (item = dateSelector->FindItem(sb.String())) == NULL) {
+		return;
+	}
+	fr = item->Frame();
+	dateSelector->RemoveItem(item);
+	delete item;
+	menu = CreateYearsMenu(curYear);
+	dateSelector->AddItem(menu, fr);
+}
+
+void CalendarControl::AddDayToWeekends(uint32 day) {
+	if (weekends.HasItem((void*)day)) { return; }
+	weekends.AddItem((void*)day);
+}
+
+void CalendarControl::RemoveDayFromWeekends(uint32 day) {
+	weekends.RemoveItem((void*)day);
+}
