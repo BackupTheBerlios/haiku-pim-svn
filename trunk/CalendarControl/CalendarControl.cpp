@@ -152,28 +152,31 @@ void MonthMenu::MouseDown(BPoint where) {
 
 /*!	\function 		CalendarControl::CalendarControl
  *	\brief			The constructor of CalendarControl.
- *	\param[in]	labelIn		The label of the control.
+ *	\param[in]	labelInForCalendar		The label of the calendar part of control.
+ *	\param[in]	labelInForTime			The label of the time setting part.
  */
 CalendarControl::CalendarControl(BRect frame,
 								 const char* name,
-								 const char* labelIn)
+								 const char* labelInForCalendar)
 	:
 	BView(frame, name, 
 				B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP_BOTTOM,
 				B_NAVIGABLE | B_WILL_DRAW | B_FRAME_EVENTS ),	
 	label(NULL),
-	dateLabel(NULL)
+	dateLabel(NULL),
+	isControlEnabled(true)
 {
 	// Preferences to be set.
-	this->weekends.AddItem((void*)kWednesday);
-	this->weekends.AddItem((void*)kSunday);
+	this->weekends.AddItem((void*)kFriday);
+	this->weekends.AddItem((void*)kSaturday);
+	this->weekends.AddItem((void*)kMonday);
 	this->firstDayOfEveryWeek = kTuesday;
 	
 	
 	frame = this->Bounds();
 	label = new BStringView(BRect(0,0,1,1), 
 							"label", 
-							labelIn);
+							labelInForCalendar);
 	if (!label) { /* Panic! */ exit(1); }
 	label->ResizeToPreferred();
 	
@@ -490,18 +493,17 @@ void CalendarControl::CreateMenu(void) {
 			longestMonth = monthNames[i].longName;
 		}	
 	}
-	BString day; 
+	BString day, sb; 
 	day << (int )daysInMonth;	// Maximum length of single day can't be more
 								// then there are days in the month
+	sb << (int )representedTime.tm_year;
 	int width1 = (int )(daysInWeek*fixedFont.StringWidth(day.String()));
 	int width2 = (int )plainFont.StringWidth(longestMonth.String()) +
-		(int )plainFont.StringWidth("0000");
+		(int )plainFont.StringWidth(sb.String());
 		
 	rectangle.left = 0;
 	width1 > width2 ? rectangle.right = width1 : rectangle.right = width2;
-	
-	
-	BString sb;	
+		
 	sb.Truncate(0);
 	
 	// Now "rectangle" has enough space to accomodate the whole set of items.
@@ -705,6 +707,36 @@ void CalendarControl::CreateMenu(void) {
 			currentWeekday = 0;
 		}	
 	}
+	
+	//-----------------------------------------------------------------------
+	// LAST ROW - The option to return to current date.
+	//----------------------------------------------------------------------
+	topLeftCorner.y += rowHeight + SPACING;
+	messageOfItem = new BMessage(kReturnToToday);
+	if (!messageOfItem) { /* Panic! */ exit(1); }
+	sb.Truncate(0);
+	sb << "Go to today";		// Label
+	itemToAdd = new DayItem(sb.String(), messageOfItem);
+	if (!itemToAdd) { /* Panic! */ exit(1); }
+	// Setting the color to blue
+	color.red = 0; color.green = 0; color.blue = 255; color.alpha = 255;
+	itemToAdd->SetFrontColor(color);
+	itemToAdd->SetBackColor(ui_color(B_MENU_BACKGROUND_COLOR));
+	itemToAdd->SetServiceItem(true);
+	itemToAdd->SetEnabled(true);
+	// The new v-alignment was already set above. Now it's time to set the
+	// x-alignment. I'd like to align this item to the center of Menu's rec-
+	// tangle, which require some additional calculations.
+	BRect menuRect = dateSelector->Bounds();
+	float desiredWidth = plainFont.StringWidth(sb.String());
+	float currentWidth = 0;
+	width1 + (daysInWeek+1)*2*SPACING > width2 ?
+		currentWidth = width1  + (daysInWeek+1)*2*SPACING :
+		currentWidth = width2;
+	topLeftCorner.x = 0.5*(currentWidth - desiredWidth);
+	rectSize.SetHeight( plainFont.Size() + SPACING );
+	rectSize.SetWidth(desiredWidth); 
+	dateSelector->AddItem(itemToAdd, BRect(topLeftCorner, rectSize));
 }
 // <-- end of function CalendarControl::CreateMenu
 
@@ -973,4 +1005,19 @@ void CalendarControl::AddDayToWeekends(uint32 day) {
 
 void CalendarControl::RemoveDayFromWeekends(uint32 day) {
 	weekends.RemoveItem((void*)day);
+}
+
+void CalendarControl::SetEnabled(bool toSet) {
+	if (toSet == isControlEnabled) { return; }	
+	
+	rgb_color col;
+	if (toSet) {
+		col = ui_color(B_MENU_ITEM_TEXT_COLOR);	
+	} else {
+		col = ui_color(B_MENU_SELECTION_BACKGROUND_COLOR);
+	}
+	
+	this->dateLabel->SetHighColor(col); 
+	this->dateLabel->Draw(dateLabel->Bounds());
+	this->menuBar->SetEnabled(toSet);
 }

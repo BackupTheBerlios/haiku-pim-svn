@@ -29,6 +29,9 @@ const uint32	kYearDecreased		= 'YEA-';
 const uint32	kYearIncreased		= 'YEA+';
 const uint32	kOpenDateSelector 	= 'DATE';
 const uint32	kTodayModified		= 'TODY';
+const uint32	kReturnToToday		= 'RETD';
+const uint32	kHourUpdated		= 'HOUR';
+const uint32	kMinuteUpdated		= 'MINU';
 
 /*!	\enum	DmyOrder
  *	\brief	Defines the order of the elements in the control string.
@@ -104,13 +107,13 @@ class CalendarControl
 	public BView
 {
 private:
-	BStringView* label, *dateLabel;
+	BStringView* label, *dateLabel, *timeLabel;
 	BMenuBar* menuBar;
-//	BTextView* textView;
+	BMenuBar* timeSetting;
+	BCheckBox* pm;
+	
 	TimeRepresentation representedTime;
-//	BButton* openMenuButton;
 	MonthMenu* dateSelector;
-//	BMenuBar* openMenuButton;
 	CalendarModule* calModule;
 	char separator;
 	DmyOrder orderOfElements;
@@ -119,6 +122,7 @@ private:
 protected:
 	BList weekends;
 	uint32 firstDayOfEveryWeek;
+	bool isControlEnabled;
 
 	virtual void Init();
 	virtual void CreateMenu(void);
@@ -131,7 +135,7 @@ protected:
 public:
 	CalendarControl(BRect frame,
 					const char* name,
-					const char* label);
+					const char* labelCalendar);
 	virtual ~CalendarControl(void);
 
 	inline virtual void SetSeparator(char sep) { separator = sep; this->UpdateText(); }
@@ -147,6 +151,9 @@ public:
 	virtual void MakeFocus(bool focused = true);
 	
 	virtual void MessageReceived (BMessage* in);
+	
+	virtual void SetEnabled(bool toSet = true);
+	inline virtual bool IsEnabled(void) { return isControlEnabled; }
 	
 	virtual void UpdateYearsMenu(int prevYear, int curYear);
 	
