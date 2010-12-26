@@ -443,6 +443,9 @@ void CalendarControl::CreateMenu(void) {
 	BFont plainFont(be_plain_font);
 	BRect rectangle;
 	
+	float widthOfTheWeekRows = 0;
+	float widthOfFirstRow = 0;
+	
 	// Which month shall we represent?
 	map<int, BString> dayNames = calModule->GetDayNamesForLocalYearMonth(
 			this->representedTime.tm_year,
@@ -476,7 +479,7 @@ void CalendarControl::CreateMenu(void) {
 	float numberOfWeeksRequiredFL = 1 + 
 		((float)(daysInMonth - (daysInWeek - firstDayOfMonthInFirstWeek))
 			/ daysInWeek);
-	
+	  
 	int numberOfWeeksRequired = (int )numberOfWeeksRequiredFL;
 	if (numberOfWeeksRequiredFL > (int )numberOfWeeksRequiredFL) {
 		++numberOfWeeksRequired;
@@ -559,14 +562,14 @@ void CalendarControl::CreateMenu(void) {
 				BRect(topLeftCorner, rectSize));
 
 	topLeftCorner.x += (float)fixedFont.StringWidth("‹") + SPACING;
-	
+
 	// Add the list of months	
 	rectSize.SetHeight((float)plainFont.Size());
 	rectSize.SetWidth((float)plainFont.StringWidth(longestMonth.String()));
 	dateSelector->AddItem(listOfMonths, 
 					BRect(topLeftCorner, rectSize) );
 	topLeftCorner.x += SPACING + rectSize.Width();	
-	
+
 	// Add the item to scroll list of months forward.
 	messageOfItem = new BMessage(kMonthIncreased);
 	itemToAdd = new DayItem("›", messageOfItem);
@@ -582,7 +585,7 @@ void CalendarControl::CreateMenu(void) {
 				BRect(topLeftCorner, rectSize));
 
 	topLeftCorner.x += (float)fixedFont.StringWidth("›") + 10 + SPACING;
-				
+
 	// Add the item to scroll list of years down.
 	messageOfItem = new BMessage(kYearDecreased);
 	itemToAdd = new DayItem("‒", messageOfItem);
@@ -730,8 +733,8 @@ void CalendarControl::CreateMenu(void) {
 	BRect menuRect = dateSelector->Bounds();
 	float desiredWidth = plainFont.StringWidth(sb.String());
 	float currentWidth = 0;
-	width1 + (daysInWeek+1)*2*SPACING > width2 ?
-		currentWidth = width1  + (daysInWeek+1)*2*SPACING :
+	width1 + (daysInWeek+1)*2*SPACING > width2 ?	\
+		currentWidth = width1  + (daysInWeek+1)*2*SPACING :	\
 		currentWidth = width2;
 	topLeftCorner.x = 0.5*(currentWidth - desiredWidth);
 	rectSize.SetHeight( plainFont.Size() + SPACING );
@@ -835,6 +838,8 @@ void CalendarControl::MessageReceived(BMessage* in) {
 	int8 month;
 	int year;
 	BMessage reply(B_REPLY);
+	time_t currentTime = 0;
+
 	if (!in) { return; }	// Sanity check
 
 	BString sb;
@@ -899,6 +904,16 @@ void CalendarControl::MessageReceived(BMessage* in) {
 			}
 			dateSelector->Invalidate();			
 			UpdateText();
+			UpdateTargets(dateSelector);
+			return;
+			break;
+		case (kReturnToToday):
+			this->representedTime = calModule->FromTimeTToLocalCalendar( time(NULL) );			
+			UpdateText();
+			menuBar->RemoveItem(dateSelector);
+			delete dateSelector;
+			CreateMenu();
+			menuBar->AddItem(dateSelector);
 			UpdateTargets(dateSelector);
 			return;
 			break;

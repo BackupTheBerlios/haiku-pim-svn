@@ -69,7 +69,7 @@ class DayItem
 		virtual void Fire();
 
 //		virtual status_t Invoke(BMessage* message = NULL);
-	
+	 
 		virtual void SetToday(bool in = false) { isToday = in; }
 		virtual void SetServiceItem(bool in = false) { isServiceItem = in; }
 		inline virtual bool IsServiceItem(void) {return isServiceItem;}
@@ -99,12 +99,19 @@ class MonthMenu
 		}
 };
 
+struct CalendarBasics 
+{
+	TimeRepresentation representedTime;	
+};	
+
+
 /*!	\class	CalendarControl
  *	\brief	The control used to get and set calendar data.
  */
 class CalendarControl 
 	:
-	public BView
+	public BView,
+	protected CalendarBasics
 {
 private:
 	BStringView* label, *dateLabel, *timeLabel;
@@ -112,7 +119,6 @@ private:
 	BMenuBar* timeSetting;
 	BCheckBox* pm;
 	
-	TimeRepresentation representedTime;
 	MonthMenu* dateSelector;
 	CalendarModule* calModule;
 	char separator;
