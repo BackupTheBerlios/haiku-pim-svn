@@ -161,7 +161,7 @@ CalendarControl::CalendarControl(BRect frame,
 	:
 	BView(frame, name, 
 				B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP_BOTTOM,
-				B_NAVIGABLE | B_WILL_DRAW | B_FRAME_EVENTS ),	
+				B_NAVIGABLE | B_WILL_DRAW | B_FRAME_EVENTS ),
 	label(NULL),
 	dateLabel(NULL),
 	isControlEnabled(true)
@@ -257,7 +257,7 @@ void CalendarControl::AttachedToWindow() {
 	BMenu* men; BMenuItem* item;
 	if (dateSelector) {
 		for (int i=0; i<dateSelector->CountItems(); i++) {
-			if (men = dateSelector->SubmenuAt(i)) {
+			if ( (men = dateSelector->SubmenuAt(i) ) != NULL ) {
 				men->SetTargetForItems(this);	
 			} else {
 				if (item = dateSelector->ItemAt(i)) {
@@ -1036,3 +1036,356 @@ void CalendarControl::SetEnabled(bool toSet) {
 	this->dateLabel->Draw(dateLabel->Bounds());
 	this->menuBar->SetEnabled(toSet);
 }
+
+/*==========================================================================
+**			IMPLEMENTATION OF CLASS HourMinControl
+**========================================================================*/
+HourMinControl::HourMinControl( BRect bounds,
+								const char* name,
+								BString label,
+								const TimeRepresentation *trIn,
+								BMessage* preferences )
+	:
+	BView( bounds, name, 
+		B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP_BOTTOM,
+		B_NAVIGABLE | B_WILL_DRAW | B_FRAME_EVENTS ),
+	labelView(NULL),
+	chooserMenuBar(NULL),
+	hoursMenu(NULL),
+	minutesMenu(NULL)	
+{
+	status_t retVal = B_OK;
+	if ( !preferences ||
+		  preferences->FindInt8("HoursLimit", (int8*)&hoursLimit) 	  != B_OK )
+	{
+		this->hoursLimit = 23;	
+	}
+	if ( !preferences ||
+		  preferences->FindInt8("MinutesLimit", (int8*)&minutesLimit) != B_OK )
+	{
+		this->minutesLimit = 55;
+	}
+	if ( !preferences ||
+		  preferences->FindBool("fTwentyFourHoursClock", &fTwentyFourHoursClock) != B_OK )
+	{
+		this->fTwentyFourHoursClock = true;
+	}
+	if ( !preferences ||
+		  preferences->FindBool("NegativeTime", &negativeTime) != B_OK )
+	{
+		negativeTime = false;
+	}
+	
+	if ( trIn ) {
+		this->representedTime = *trIn;
+	} else {
+		struct tm * curTime = NULL;
+		time_t tempTime = 0;
+		time( &tempTime );
+		curTime = localtime( &tempTime );
+		if ( curTime ) {
+			this->representedTime = TimeRepresentation( *curTime );
+		} else {	// Returned struct is NULL
+			this->representedTime.tm_hour = 0;
+			this->representedTime.tm_min = 0;
+		}
+	}
+	
+	Init ( bounds, label );
+}	/* End of constructor */
+
+void HourMinControl::Init( BRect bounds, BString label )
+{
+	/* Creating view for the label */
+	labelView = new BStringView( BRect(0, 0, 1, 1),
+								 "labelTime",
+								 label.String() );
+	if ( !labelView ) {
+		/* Panic! */
+		exit(1);
+	}
+	labelView->ResizeToPreferred();
+	
+	/* Initializing the menubar */
+	if ( !this->CreateMenuBar() )
+	{
+		/* Panic! */
+		exit(1);
+	}	
+	
+	/* Laying all views out */
+	BGroupLayout* lay = new BGroupLayout(B_HORIZONTAL);
+	
+	if (!lay) { 
+		// Panic! 
+		exit(1); 
+	}
+	lay->SetInsets(0, 0, 0, 0);
+	lay->SetSpacing(10);
+	BView::SetLayout(lay);
+	
+	BLayoutItem *layoutItem;
+	BSize size;
+	
+	layoutItem = lay->AddView(labelView);
+	size.SetWidth( layoutItem->Frame().Width() );
+	size.SetHeight( layoutItem->Frame().Height() );
+	layoutItem->SetExplicitPreferredSize(size);
+	layoutItem->SetExplicitAlignment(BAlignment(B_ALIGN_LEFT, B_ALIGN_TOP));
+	
+	layoutItem = lay->AddView( chooserMenuBar );
+	layoutItem->SetExplicitAlignment(BAlignment(B_ALIGN_RIGHT, B_ALIGN_TOP));
+//	size.SetHeight(size.Height());
+//	layoutItem->SetExplicitMaxSize(size);	
+}
+
+HourMinControl::~HourMinControl()
+{
+	
+}	/* <-- end of destructor for hours and minutes control */
+
+BMenu* HourMinControl::CreateHoursMenu()
+{	
+	BMenuItem* toAdd = NULL;
+	BMessage*  toSend = NULL;
+
+	/* First, clear the previous menu */
+	if ( hoursMenu != NULL )
+	{
+		hoursMenu->RemoveSelf();
+		for (int i = hoursMenu->CountItems() - 1; i >= 0; i-- )
+		{
+			toAdd = hoursMenu->RemoveItem( i );
+			if (toAdd) {
+				delete (toAdd);
+			}
+		}
+	}
+	
+	BMenu* toReturn = new BMenu( "HoursMenu", B_ITEMS_IN_COLUMN );
+	if ( !toReturn ) {
+		/* Panic! */
+		exit(1);
+	}
+	
+	int hourLimit = ( fTwentyFourHoursClock ) ? ( 24 ) : ( 12 );
+	if ( hourLimit < this->hoursLimit ) {
+		hourLimit = this->hoursLimit;
+	}
+
+	int startingHour = 0;
+	BString hourLabel;	
+	toReturn->SetRadioMode( true );
+	toReturn->SetLabelFromMarked( true );
+ 	for (int hour = 0; hour < hourLimit; hour++ )
+	{
+		hourLabel.Truncate(0);
+		toSend = new BMessage( kHourUpdated );
+		if ( !toSend ) {
+			/* Panic! */
+			exit (1);
+		}
+		toSend->AddInt8("Hour", hour);
+		
+		if ( hour == 0 &&
+			 this->representedTime.GetIsRepresentingRealDate() )
+		{
+			if ( !fTwentyFourHoursClock &&
+		     	 this->representedTime.tm_hour < 12 )
+			{
+				hourLabel << " 0";
+			} else if ( !fTwentyFourHoursClock &&
+					 	this->representedTime.tm_hour >= 12 )
+			{
+				hourLabel << "12";
+			} else {	/* The only option that's left - the clock is 24-hours */
+				hourLabel << " 0";
+			}
+		} else {	/* Either hour is not 0, or time is not a real one */
+			if ( hour < 10 ) {
+				hourLabel << " " << hour;
+			} else {
+				hourLabel << hour;
+			}
+		}
+				
+		toAdd = new BMenuItem( hourLabel.String(), toSend );
+		if ( !toAdd )
+		{
+			/* Panic! */
+			exit(1);
+		}
+
+		toReturn->AddItem( toAdd );
+		
+		/* The item should be selected if the represented time equals to current time */
+		if ( this->representedTime.tm_hour == ( ( PM ) ? hour+12 : hour ) ) {
+			toAdd->SetMarked( true );			
+		}		
+
+	}	/* end of "for (each hour from 0 to hourLimit */
+	
+	return toReturn;	
+}	/* <-- end of function HourMinControl::CreateHoursMenu */
+
+BMenu* HourMinControl::CreateMinutesMenu()
+{
+	BMenu* toReturn = new BMenu("MinutesMenu", B_ITEMS_IN_COLUMN);
+	if (!toReturn) {
+		/* Panic! */
+		exit(1);
+	}
+	BString itemLabel;
+	BMenuItem *toAdd = NULL;
+	BMessage  *toSend = NULL;
+	int minLimit = ( minutesLimit < 55 ) ? minutesLimit : 55;
+	toReturn->SetRadioMode( true );
+	toReturn->SetLabelFromMarked( true );
+	for ( int mins = 0; mins <= minLimit; mins += 5 )
+	{
+		itemLabel.Truncate(0);
+		if ( mins < 10 )
+		{
+			itemLabel << " " << mins;
+		} else {
+			itemLabel << mins;
+		}
+		
+		toSend = new BMessage( kMinuteUpdated );
+		if ( !toSend )
+		{
+			/* Panic! */
+			exit(1);
+		}
+		
+		toSend->AddInt8("Minutes", mins);
+		
+		toAdd = new BMenuItem( itemLabel.String(), toSend );
+		if ( ! toAdd ) {
+			/* Panic! */
+			exit(1);
+		}		
+		
+		toReturn->AddItem( toAdd );
+		if ( (int)this->representedTime.tm_min / 5 )
+		{
+			toAdd->SetMarked( true );
+		}
+		
+	}	/* <-- end of "for (minutes from 0 to the limit)" */
+	
+	return toReturn;	
+}	/* <-- end of function HourMinControl::CreateMinutesMenu */
+
+BMenuBar*	HourMinControl::CreateMenuBar( void )
+{
+	BRect frame = this->Bounds();
+	BMenuItem* menuItem = NULL;
+	BFont plainFont(be_plain_font);
+	/* It's assumed the "label" variable is already set */
+	frame.left += plainFont.StringWidth( label.String() ) + SPACING;
+	frame.top += SPACING;
+	frame.right -= SPACING;
+	frame.bottom -= SPACING;
+	chooserMenuBar = new BMenuBar(frame, 
+								  "TimeControl menubar",
+								  B_FOLLOW_LEFT | B_FOLLOW_TOP,
+								  B_ITEMS_IN_ROW,
+								  false );
+	if (!chooserMenuBar) {
+		/* Panic! */
+		exit(1);
+	}
+	
+	/* Hours menu */
+	this->hoursMenu = CreateHoursMenu();
+	if ( !hoursMenu ) {
+		/* Panic! */
+		exit(1);
+	}
+	hoursMenu->SetRadioMode( true );
+	chooserMenuBar->AddItem( hoursMenu );
+	
+	/* Separator - it's disabled symbol ":" */
+	menuItem = new BMenuItem( ":", NULL );
+	if ( !menuItem ) {
+		/* Panic! */
+		exit(1);
+	}
+	menuItem->SetEnabled( false );
+	chooserMenuBar->AddItem( menuItem );
+	
+	/* Minutes menu */
+	this->minutesMenu = CreateMinutesMenu();
+	if ( !minutesMenu ) {
+		/* Panic! */
+		exit(1);
+	}
+	minutesMenu->SetRadioMode( true );
+	chooserMenuBar->AddItem( minutesMenu );
+	
+	return( chooserMenuBar );
+	
+}	/* <-- end of function HourMinControl::CreateMenuBar */
+
+void HourMinControl::MessageReceived( BMessage* in ) {
+	int temp = 0;
+	int8 cTempVar = 0;	/* "c" is for "char" */
+	uint32 command = in->what;
+	
+	switch( command )
+	{
+		case kHourUpdated:
+			if ( B_OK != in->FindInt8("Hour", &cTempVar ) ) {
+				/* error */
+				return;	
+			}
+			this->representedTime.tm_hour = cTempVar;
+			break;
+		
+		case kMinuteUpdated:
+			if ( B_OK != in->FindInt8("Minutes", &cTempVar ) ) {
+				/* error */
+				return;
+			}
+			this->representedTime.tm_min = cTempVar;
+			break;
+		
+		default:
+			BView::MessageReceived( in );
+			break;
+	};
+	
+	return;
+}	/* <-- end of function HourMinControl::MessageReceived */
+
+
+void HourMinControl::AttachedToWindow() {
+	// Get the view color of the father
+	if (Parent()) {
+		SetViewColor(Parent()->ViewColor());
+	}
+	// Attach to window both current view and all of its children
+	BView::AttachedToWindow();
+	
+	// This view should respond to the messages - thus the Looper must know it
+	BLooper* looper = (BLooper*)Looper();
+	if (looper && looper->LockLooper()) {
+		looper->AddHandler((BHandler*) this);
+		looper->UnlockLooper();
+	}
+	
+	// Update targets of all children
+	BMenu* men; BMenuItem* item;
+	if ( chooserMenuBar ) {
+		for (int i=0; i<chooserMenuBar->CountItems(); i++) {
+			if ( (men = chooserMenuBar->SubmenuAt(i) ) != NULL ) {
+				men->SetTargetForItems(this);	
+			} else {
+				if (item = chooserMenuBar->ItemAt(i)) {
+					item->SetTarget(this);	
+				}	
+			}
+		}	
+	}	
+} // <-- end of function "HourMinControl::AttachedToWindow"

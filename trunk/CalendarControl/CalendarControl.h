@@ -151,8 +151,6 @@ public:
 	
 	virtual void FrameResized(float width, float height);
 	virtual void AttachedToWindow();
-
-	inline virtual void SelectTime(const TimeRepresentation &toSet) {};
 	
 	virtual void MakeFocus(bool focused = true);
 	
@@ -174,5 +172,48 @@ public:
 	virtual BList GetWeekends(void) { return weekends; }
 };
 // <-- end of class CalendarControl
+
+class HourMinControl
+	:
+	public BView,
+	protected CalendarBasics
+{
+private:
+
+protected:
+	BMenu* CreateHoursMenu();
+	BMenu* CreateMinutesMenu();
+	BMenuBar* CreateMenuBar();
+	
+	
+	bool fTwentyFourHoursClock;
+	char hoursLimit;
+	char minutesLimit;
+	bool negativeTime;
+	
+	bool PM;
+	
+	BMenu* hoursMenu;
+	BMenu* minutesMenu;
+	BStringView* labelView;
+	BString label;
+	BMenuBar* chooserMenuBar;
+	
+		/* This is the main constructor of the class */
+	void Init( BRect bounds, BString label );
+
+public:	
+	HourMinControl( BRect bounds,
+					const char* name,
+					BString label,
+					const TimeRepresentation *trIn = NULL,
+					BMessage* preferences = NULL );
+	~HourMinControl();
+
+	void UpdateTime(const TimeRepresentation *trIn );
+	void UpdatePreferences(BMessage* in);
+	void MessageReceived( BMessage* in);
+	void AttachedToWindow();
+};
 
 #endif	// __CALENDAR_CONTROL_H__
