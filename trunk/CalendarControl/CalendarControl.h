@@ -32,6 +32,7 @@ const uint32	kTodayModified		= 'TODY';
 const uint32	kReturnToToday		= 'RETD';
 const uint32	kHourUpdated		= 'HOUR';
 const uint32	kMinuteUpdated		= 'MINU';
+const uint32	kPMToggled			= 'PMTG';
 
 /*!	\enum	DmyOrder
  *	\brief	Defines the order of the elements in the control string.
@@ -182,22 +183,23 @@ private:
 
 protected:
 	BMenu* CreateHoursMenu();
+	BMenu* CreateAMHoursMenu( bool *pbPM = NULL );
 	BMenu* CreateMinutesMenu();
 	BMenuBar* CreateMenuBar();
-	
+	BCheckBox* CreatePMCheckBox();
+	void TogglePM( bool* toSet = NULL );
 	
 	bool fTwentyFourHoursClock;
 	char hoursLimit;
 	char minutesLimit;
 	bool negativeTime;
 	
-	bool PM;
-	
 	BMenu* hoursMenu;
 	BMenu* minutesMenu;
 	BStringView* labelView;
 	BString label;
 	BMenuBar* chooserMenuBar;
+	BCheckBox* PMCheckBox;
 	
 		/* This is the main constructor of the class */
 	void Init( BRect bounds, BString label );

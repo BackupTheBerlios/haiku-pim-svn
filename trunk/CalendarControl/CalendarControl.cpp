@@ -1056,20 +1056,25 @@ HourMinControl::HourMinControl( BRect bounds,
 {
 	status_t retVal = B_OK;
 	if ( !preferences ||
+		  preferences->FindBool("fTwentyFourHoursClock", &fTwentyFourHoursClock) != B_OK )
+	{
+		this->fTwentyFourHoursClock = false;
+	}
+	if ( !preferences ||
 		  preferences->FindInt8("HoursLimit", (int8*)&hoursLimit) 	  != B_OK )
 	{
-		this->hoursLimit = 23;	
+		if ( fTwentyFourHoursClock ) {
+			this->hoursLimit = 23;
+		} else {
+			this->hoursLimit = 11;
+		}
 	}
 	if ( !preferences ||
 		  preferences->FindInt8("MinutesLimit", (int8*)&minutesLimit) != B_OK )
 	{
 		this->minutesLimit = 55;
 	}
-	if ( !preferences ||
-		  preferences->FindBool("fTwentyFourHoursClock", &fTwentyFourHoursClock) != B_OK )
-	{
-		this->fTwentyFourHoursClock = true;
-	}
+	
 	if ( !preferences ||
 		  preferences->FindBool("NegativeTime", &negativeTime) != B_OK )
 	{
@@ -1094,6 +1099,9 @@ HourMinControl::HourMinControl( BRect bounds,
 	Init ( bounds, label );
 }	/* End of constructor */
 
+/*!	\function		HourMinControl::Init
+ *	\brief			Main initialization and configuration function for HMControl.
+ */
 void HourMinControl::Init( BRect bounds, BString label )
 {
 	/* Creating view for the label */
@@ -1111,7 +1119,14 @@ void HourMinControl::Init( BRect bounds, BString label )
 	{
 		/* Panic! */
 		exit(1);
-	}	
+	}
+	
+	/* Initialized the PM checkbox */
+	if ( !this->CreatePMCheckBox() )
+	{
+		/* Panic! */
+		exit(1);
+	}
 	
 	/* Laying all views out */
 	BGroupLayout* lay = new BGroupLayout(B_HORIZONTAL);
@@ -1135,6 +1150,14 @@ void HourMinControl::Init( BRect bounds, BString label )
 	
 	layoutItem = lay->AddView( chooserMenuBar );
 	layoutItem->SetExplicitAlignment(BAlignment(B_ALIGN_RIGHT, B_ALIGN_TOP));
+	
+	layoutItem = lay->AddView( PMCheckBox );
+	size.SetWidth( layoutItem->Frame().Width() );
+	size.SetHeight( layoutItem->Frame().Height() );
+	layoutItem->SetExplicitPreferredSize(size);
+	layoutItem->SetExplicitAlignment(BAlignment(B_ALIGN_RIGHT, B_ALIGN_TOP));
+	
+	
 //	size.SetHeight(size.Height());
 //	layoutItem->SetExplicitMaxSize(size);	
 }
@@ -1144,89 +1167,335 @@ HourMinControl::~HourMinControl()
 	
 }	/* <-- end of destructor for hours and minutes control */
 
+/*!	\function 	HourMinControl::CreateHoursMenu
+ *	\brief		This function initializes the hours menu.
+ *	\details	If user's preference is to use 24-hours clock, the items
+ *				will be laid in matrix (two columns of 12 items each).
+ *				Else, the items will be laid in column.
+ */
 BMenu* HourMinControl::CreateHoursMenu()
 {	
-	BMenuItem* toAdd = NULL;
-	BMessage*  toSend = NULL;
-
-	/* First, clear the previous menu */
-	if ( hoursMenu != NULL )
-	{
-		hoursMenu->RemoveSelf();
-		for (int i = hoursMenu->CountItems() - 1; i >= 0; i-- )
-		{
-			toAdd = hoursMenu->RemoveItem( i );
-			if (toAdd) {
-				delete (toAdd);
-			}
-		}
-	}
-	
+//	BMenuItem* toAdd = NULL;
+//	BMessage*  toSend = NULL;
+//	int hourLimit;	/*! << This is the maximal value in the hours menu. */
+//
+//	/* First, clear the previous menu */
+//	if ( hoursMenu != NULL )
+//	{
+//		hoursMenu->RemoveSelf();
+//		for (int i = hoursMenu->CountItems() - 1; i >= 0; i-- )
+//		{
+//			toAdd = hoursMenu->RemoveItem( i );
+//			if (toAdd) {
+//				delete (toAdd);
+//			}
+//		}
+//	}
+//	
+//	
 	BMenu* toReturn = new BMenu( "HoursMenu", B_ITEMS_IN_COLUMN );
-	if ( !toReturn ) {
-		/* Panic! */
-		exit(1);
-	}
-	
-	int hourLimit = ( fTwentyFourHoursClock ) ? ( 24 ) : ( 12 );
-	if ( hourLimit < this->hoursLimit ) {
-		hourLimit = this->hoursLimit;
-	}
-
-	int startingHour = 0;
-	BString hourLabel;	
-	toReturn->SetRadioMode( true );
-	toReturn->SetLabelFromMarked( true );
- 	for (int hour = 0; hour < hourLimit; hour++ )
-	{
-		hourLabel.Truncate(0);
-		toSend = new BMessage( kHourUpdated );
-		if ( !toSend ) {
-			/* Panic! */
-			exit (1);
-		}
-		toSend->AddInt8("Hour", hour);
-		
-		if ( hour == 0 &&
-			 this->representedTime.GetIsRepresentingRealDate() )
-		{
-			if ( !fTwentyFourHoursClock &&
-		     	 this->representedTime.tm_hour < 12 )
-			{
-				hourLabel << " 0";
-			} else if ( !fTwentyFourHoursClock &&
-					 	this->representedTime.tm_hour >= 12 )
-			{
-				hourLabel << "12";
-			} else {	/* The only option that's left - the clock is 24-hours */
-				hourLabel << " 0";
-			}
-		} else {	/* Either hour is not 0, or time is not a real one */
-			if ( hour < 10 ) {
-				hourLabel << " " << hour;
-			} else {
-				hourLabel << hour;
-			}
-		}
-				
-		toAdd = new BMenuItem( hourLabel.String(), toSend );
-		if ( !toAdd )
-		{
-			/* Panic! */
-			exit(1);
-		}
-
-		toReturn->AddItem( toAdd );
-		
-		/* The item should be selected if the represented time equals to current time */
-		if ( this->representedTime.tm_hour == ( ( PM ) ? hour+12 : hour ) ) {
-			toAdd->SetMarked( true );			
-		}		
-
-	}	/* end of "for (each hour from 0 to hourLimit */
-	
+//	if ( !toReturn ) {
+//		/* Panic! */
+//		exit(1);
+//	}
+//	
+//	 = ( fTwentyFourHoursClock ) ? ( 24 ) : ( 12 );
+//	if ( hourLimit < this->hoursLimit ) {
+//		hourLimit = this->hoursLimit;
+//	}
+//
+//	int startingHour = 0;
+//	BString hourLabel;	
+//	toReturn->SetRadioMode( true );
+//	toReturn->SetLabelFromMarked( true );
+//
+//	/* If the represented time is a real date, we should observe
+//	 * user's preferences of AM / PM time representation.
+//	 */
+//	if ( this->representedTime.GetIsRepresentingRealDate() ) 
+//	{
+//		if ( fTwentyFourHoursClock )
+//		{
+//			if ( this->representedTime.tm_hour < 12 ) // Hours are from 0 to 11 AM
+//			{
+//				for ( int hour = 0; hour < 12; hour++ )
+//				{
+//					// Create the label
+//					hourLabel.Truncate(0);
+//					if ( hour < 10 ) {
+//						hourLabel << " " << hour;
+//					} else {
+//						hourLabel << hour;
+//					}
+//					
+//					// Create the message
+//					toSend = new BMessage( kHourUpdated );
+//					if ( !toSend ) {
+//						/* Panic! */
+//						exit (1);
+//					}
+//					toSend->AddInt8("Hour", hour);
+//
+//					// Create the menu item
+//					toAdd = new BMenuItem( hourLabel.String(), toSend );
+//					if ( !toAdd )
+//					{
+//						/* Panic! */
+//						exit(1);
+//					}
+//					
+//					// Select the menu item if corresponds to the current time
+//					if ( hour == representedTime.tm_hour )
+//					{
+//						toAdd->SetMarked( true );
+//					}
+//			
+//					// Add the menu item to the menu
+//					toReturn->AddItem( toAdd );
+//				}	// <-- end of "for (hours from 0 to 11)"				
+//			}	
+//			else	// PM - hours are from 12 through 1 to 11
+//			{
+//				for ( int hour = 0; hour < 12; hour++ )
+//				{
+//					hourLabel.Truncate(0);
+//					if ( hour == 0 )	// 12 PM
+//					{
+//						hourLabel << 12;
+//					} else if ( hour < 10 ) {
+//						hourLabel << " " << hour;
+//					} else {
+//						hourLabel << hour;
+//					}
+//					
+//					// Create the message
+//					toSend = new BMessage( kHourUpdated );
+//					if ( !toSend ) {
+//						/* Panic! */
+//						exit (1);
+//					}
+//					toSend->AddInt8("Hour", hour);
+//
+//					// Create the menu item
+//					toAdd = new BMenuItem( hourLabel.String(), toSend );
+//					if ( !toAdd )
+//					{
+//						/* Panic! */
+//						exit(1);
+//					}
+//					
+//					// Select the menu item if corresponds to the current time
+//					if ( hour == representedTime.tm_hour )
+//					{
+//						toAdd->SetMarked( true );
+//					}
+//			
+//					// Add the menu item to the menu
+//					toReturn->AddItem( toAdd );
+//					
+//					
+//					
+//				}
+//				
+//				
+//			}
+//		} else {
+//
+//			if ( hour < 10 )
+//			{
+//				hourLabel << " " << hour;			
+//			}
+//		}
+//	
+//	} else {		// Represented time is not a real date.
+//	
+//	
+//	}
+//
+//
+//	
+// 	for (int hour = 0; hour < hourLimit; hour++ )
+//	{
+//		
+//		
+//		if ( hour == 0 )
+//		{
+//			if ( !fTwentyFourHoursClock &&
+//		     	 this->representedTime.tm_hour < 12 )
+//			{
+//				
+//			} else if ( !fTwentyFourHoursClock &&
+//					 	this->representedTime.tm_hour >= 12 )
+//			{
+//				hourLabel << "12";
+//			} else {	/* The only option that's left - the clock is 24-hours */
+//				hourLabel << " 0";
+//			}
+//		} else {	/* Either hour is not 0, or time is not a real one */
+//			if ( hour < 10 ) {
+//				hourLabel << " " << hour;
+//			} else {
+//				hourLabel << hour;
+//			}
+//		}
+//				
+//		
+//		/* The item should be selected if the represented time equals to current time */
+//		if ( ( (!fTwentyFourHoursClock ) && ( this->representedTime.tm_hour == ( ( PM ) ? hour+12 : hour ) ) ) ||
+//		     ( ( fTwentyFourHoursClock ) && ( this->representedTime.tm_hour == hour ) ) )
+//		{
+//			toAdd->SetMarked( true );			
+//		}		
+//
+//	}	/* end of "for (each hour from 0 to hourLimit */
+//	
 	return toReturn;	
 }	/* <-- end of function HourMinControl::CreateHoursMenu */
+
+
+
+/*!	\function 	HourMinControl::CreateAMHoursMenu
+ *	\brief		Create the hours menu corresponding to AM / PM differentiation
+ *	\param[in]	pbPM	Pointer to boolean. It allows to pass three values:
+ *						"true", "false" and NULL. If NULL (default), the menu
+ *						to be built is 24-hours. If "false", the menu represents
+ *						AM. If "true", the menu represents PM.
+ */
+BMenu* HourMinControl::CreateAMHoursMenu( bool *pbPM )
+{
+	BMenu*	toReturn;
+	BString	hourLabel;	
+	BMenuItem* toAdd;
+	BMessage* toSend;
+	
+	if ( !pbPM )	// 24-hours menu
+	{
+		BRect tempRect;
+		BSize	size;		// Size of any individual item
+		BPoint	topLeftCorner( SPACING, SPACING );
+
+		hourLabel.Truncate(0);
+		hourLabel << "00";	// Take the widest character to calculate needed size
+		
+		// Prepare the items required to calculate the menu's size
+		BFont  	plainFont(be_plain_font);
+		font_height	fontHeightStruct;
+		
+		hourLabel = "00";	// Take the widest character to calculate needed size
+		
+			// Getting the required height of the single item.
+		plainFont.GetHeight( &fontHeightStruct );		
+		size.SetHeight( plainFont.Size() + 
+//						fontHeightStruct.ascent + 
+//						fontHeightStruct.descent +
+						fontHeightStruct.leading + SPACING );
+			
+		size.SetWidth( plainFont.StringWidth( hourLabel.String() ) + SPACING );
+		
+		toReturn = new BMenu("HoursMenu", 
+							 size.Width()*2 + SPACING + 20,
+							 size.Height()*12 + SPACING*13 );
+		if (!toReturn ) { /* Panic! */ exit(1); }
+		toReturn->SetRadioMode( true );
+		toReturn->SetLabelFromMarked( true );
+		
+		/*================================================
+		 * In this loop I'm adding the hours to the menu.
+		 *===============================================*/
+		
+		// There are 12 rows, starting at 0 and finishing at 11
+		for ( int index = 0; index < 12; index++ )
+		{
+			topLeftCorner.x = 10;	// From left corner to leftmost item
+			
+			// Left and right halves of the menu, "right" is "left + 12".
+			for ( int parity = 0; parity < 2; parity++ )
+			{
+				//! This variable is the actual hour. It's 0 to 11 if parity is 0
+				//	and 12 to 23 if parity is 1.
+				int hourVariable = index + ( parity * 12);
+				
+				// Create the label
+				hourLabel.Truncate( 0 );
+				if ( hourVariable < 10 ) {
+					hourLabel << ' ' << hourVariable;
+				} else {
+					hourLabel << hourVariable;
+				}
+				
+				// Create the message to be sent
+				toSend = new BMessage( kHourUpdated );
+				if ( !toSend ) { /* Panic! */ exit(1); }
+				toSend->AddInt8( "Hour", hourVariable );				
+				
+				// Create the menu item
+				toAdd = new BMenuItem( hourLabel.String(), toSend );
+				if ( !toAdd ) { /* Panic! */ exit(1); }
+				
+				if ( hourVariable == this->representedTime.tm_hour ) {
+					toAdd->SetMarked( true );
+				}
+								
+				// Add the menu item to the menu
+				toReturn->AddItem( toAdd,
+								   BRect( topLeftCorner, size ) );
+				
+				topLeftCorner.x += size.Width() + 10;	// SPACING
+			}	// <-- end of "left and right halves"
+			topLeftCorner.y += size.Height() + SPACING;
+		}	// <-- end of "0 to 11 rows"
+	}	// <-- end of "if (the required menu is for 24H clock)"
+	
+	else	// 12-hours clock
+	{
+		/* The solution is building 12-rows menu from 0 or 12 through 1 to 11. */
+		
+		// Prepare the menu
+		toReturn = new BMenu( "HoursMenu", B_ITEMS_IN_COLUMN );
+		if ( !toReturn ) { /* Panic! */ exit(1); }
+		toReturn->SetRadioMode( true );
+		toReturn->SetLabelFromMarked( true );
+		
+		for ( int hourVariable = 0; hourVariable <= 11; hourVariable++ )
+		{
+			// Prepare the label
+			hourLabel.Truncate( 0 );	// Clear the label
+			if ( *pbPM && hourVariable == 0 )
+			{
+				hourLabel << "12";
+			} else if ( hourVariable < 10 ) {
+				hourLabel << ' ' << hourVariable;
+			} else {
+				hourLabel << hourVariable;
+			}				
+			
+			// Prepare the message
+			toSend = new BMessage( kHourUpdated );
+			if ( ! toSend ) { 	/* Panic! */ exit (1); }
+			toSend->AddInt8( "Hour", *pbPM ? hourVariable + 12 : hourVariable );			
+			
+			// Prepare the menu item
+			toAdd = new BMenuItem( hourLabel.String(), toSend );
+			if ( ! toAdd ) { /* Panic! */ exit(1); }
+			if ( ( *pbPM &&
+				   ( representedTime.tm_hour == hourVariable + 12 ) ) ||
+				 ( ! *pbPM &&
+				   ( representedTime.tm_hour == hourVariable ) ) )
+			{
+				toAdd->SetMarked( true );
+			}
+			
+			toReturn->AddItem( toAdd );
+			
+		}	// <-- end of "for (hours from 0 to 11)"
+		
+	}	// <-- end of 12-hours clock
+	
+	return toReturn;
+	
+}	// <-- end of function "HourMinControl::CreateAMHoursMenu"
+
+
 
 BMenu* HourMinControl::CreateMinutesMenu()
 {
@@ -1256,7 +1525,7 @@ BMenu* HourMinControl::CreateMinutesMenu()
 		{
 			/* Panic! */
 			exit(1);
-		}
+		} 
 		
 		toSend->AddInt8("Minutes", mins);
 		
@@ -1267,7 +1536,7 @@ BMenu* HourMinControl::CreateMinutesMenu()
 		}		
 		
 		toReturn->AddItem( toAdd );
-		if ( (int)this->representedTime.tm_min / 5 )
+		if ( mins == ( (int)(this->representedTime.tm_min / 5 )*5 ) )
 		{
 			toAdd->SetMarked( true );
 		}
@@ -1277,6 +1546,10 @@ BMenu* HourMinControl::CreateMinutesMenu()
 	return toReturn;	
 }	/* <-- end of function HourMinControl::CreateMinutesMenu */
 
+/*!	\function 	HourMinControl::CreateMenuBar
+ *	\brief		Creates and initializes the menus that manage hours and minutes.
+ *	\attention	This function assumes that Control's label is already set.
+ */
 BMenuBar*	HourMinControl::CreateMenuBar( void )
 {
 	BRect frame = this->Bounds();
@@ -1298,7 +1571,16 @@ BMenuBar*	HourMinControl::CreateMenuBar( void )
 	}
 	
 	/* Hours menu */
-	this->hoursMenu = CreateHoursMenu();
+	bool  bPM, *pbPM = &bPM;
+	
+	if ( fTwentyFourHoursClock ) {
+		pbPM = NULL;
+	} else if ( representedTime.tm_hour >= 12 ) {
+		bPM = true;
+	} else {
+		bPM = false;
+	}
+	this->hoursMenu = CreateAMHoursMenu( pbPM );
 	if ( !hoursMenu ) {
 		/* Panic! */
 		exit(1);
@@ -1341,6 +1623,7 @@ void HourMinControl::MessageReceived( BMessage* in ) {
 				return;	
 			}
 			this->representedTime.tm_hour = cTempVar;
+			TogglePM( NULL );	// Update the PM checkbox
 			break;
 		
 		case kMinuteUpdated:
@@ -1349,6 +1632,40 @@ void HourMinControl::MessageReceived( BMessage* in ) {
 				return;
 			}
 			this->representedTime.tm_min = cTempVar;
+			break;
+			
+		case kPMToggled:
+			
+			if ( representedTime.tm_hour >= 12 ) {
+				representedTime.tm_hour -= 12;
+			} else {
+				representedTime.tm_hour += 12;
+			}
+			if ( chooserMenuBar )
+			{
+				chooserMenuBar->RemoveItem( hoursMenu );
+				delete hoursMenu;
+				hoursMenu = NULL;
+					/* Hours menu */
+				bool  bPM, *pbPM = &bPM;
+				
+				if ( fTwentyFourHoursClock ) {
+					pbPM = NULL;
+				} else if ( representedTime.tm_hour >= 12 ) {
+					bPM = true;
+				} else {
+					bPM = false;
+				}
+				
+				this->hoursMenu = CreateAMHoursMenu( pbPM );
+				if ( !hoursMenu ) {
+					/* Panic! */
+					exit(1);
+				}
+				hoursMenu->SetRadioMode( true );
+				hoursMenu->SetLabelFromMarked( true );
+				chooserMenuBar->AddItem( hoursMenu, 0 );
+			}
 			break;
 		
 		default:
@@ -1386,6 +1703,78 @@ void HourMinControl::AttachedToWindow() {
 					item->SetTarget(this);	
 				}	
 			}
-		}	
-	}	
+		}
+	}
+	
+	if ( PMCheckBox ) {
+		PMCheckBox->SetTarget( this );
+	}
 } // <-- end of function "HourMinControl::AttachedToWindow"
+
+BCheckBox* HourMinControl::CreatePMCheckBox( void )
+{
+	BRect frame(0, 0, 1, 1);
+	BMessage* message = new BMessage( kPMToggled );
+	if ( ! message )
+	{
+		exit(1);	/* Panic! */
+	}
+	PMCheckBox = new BCheckBox( frame,
+								"PM Control",
+								"PM",
+								message );
+	if ( !PMCheckBox )
+	{
+		/* Panic! */
+		exit(1);
+	}
+	
+	PMCheckBox->ResizeToPreferred();
+	
+	if ( fTwentyFourHoursClock )
+	{
+		PMCheckBox->SetEnabled( false );
+	} else {
+		PMCheckBox->SetEnabled( true );
+	}
+	
+	TogglePM( NULL );	// Set the correct value
+	PMCheckBox->SetTarget( this );
+	
+	return ( PMCheckBox );	
+}
+
+/*!	\function 	HourMinControl::TogglePM
+ *	\brief		Toggle the boolean "PM" and the PM checkbox correspondingly.
+ *	\param[in]	toSet	Pointer to boolean value. Since it's a pointer,
+ *					   	three values can be passed: "true", "false" or "NULL".
+ *					   	in case of "NULL", correct value of the boolean and
+ *						the need to check the checkbox is defined automatically.
+ *						If "true", both are set; if "false", both are reset.
+ */
+void HourMinControl::TogglePM( bool *toSet )
+{
+	if ( ! toSet )		// NULL
+	{
+		if ( representedTime.tm_hour > 12 )
+		{
+			PMCheckBox->SetValue( 1 );
+		} else {
+			PMCheckBox->SetValue( 0 );
+		}
+	}
+	else if ( *toSet )	// TRUE
+	{
+		if ( representedTime.tm_hour < 12 )
+		{
+			representedTime.tm_hour += 12;
+		}
+		PMCheckBox->SetValue( 1 );
+	} else {			// FALSE
+		if ( representedTime.tm_hour >= 12 )
+		{
+			representedTime.tm_hour -= 12;
+		}
+		PMCheckBox->SetValue( 0 );
+	}
+}	// <-- end of function HourMinControl::TogglePM
