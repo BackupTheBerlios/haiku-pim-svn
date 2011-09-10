@@ -74,6 +74,7 @@ extern BList global_ListOfCategories;	//!< List that holds all categories in the
 
 void	PopulateListOfCategories( BMessage* in = NULL );
 void	AddCategoryToGlobalList( const Category &toAdd );
+bool	MergeCategories( BString& source, BString& target );
 
 /*!	\brief		Just a shortcut for another function.
  *	\details	Creates a temporary object of type Category and calls the other function

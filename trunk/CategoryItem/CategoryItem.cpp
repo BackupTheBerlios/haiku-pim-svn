@@ -316,6 +316,66 @@ void	AddCategoryToGlobalList( const Category &toAdd )
 
 
 
+/*!	\brief		MergeCategories
+ *	\details	Move all items from one category to another.
+ *	\param[in]	source		The source category
+ *	\param[in]	target		The target category
+ *	\returns	"true" if the merge succeeded, "false" otherwise.
+ */
+bool	MergeCategories( BString& source, BString& target )
+{
+	BQuery*	categoryQuery = NULL;
+	BFile*	eventFile = NULL;
+	BAlert*	alert = NULL;
+	BString sb;
+	int		tempInt;
+	bool 	toReturn = false;
+	
+	/* Ask the user if he really wants to perform the merge */
+	sb << "You are going to move all items currently related to category ";
+	sb << source;
+	sb << " to the new category: " << target;
+	sb << ". This action can't be reverted. Are you sure?";
+	
+	alert = new BAlert( "Merge categories?",
+						sb.String(),
+						"Yes, sure!",
+						"No way!",
+						NULL,
+						B_WIDTH_AS_USUAL,
+						B_OFFSET_SPACING,
+						B_STOP_ALERT );
+	tempInt = alert->Go();
+	
+		// The user has denied the offer.
+	if ( ( tempInt < 0 ) || ( tempInt >= 1 ) )
+	{
+		return false;
+	}
+	
+	/* The user has accepted the offer. Miserable human... */
+	categoryQuery = new BQuery();
+	if ( ! categoryQuery ) {
+		// Can't make any change
+		return false;
+	}
+	BVolumeRoster volumeRoster;
+	BVolume bootVolume;
+	volumeRoster.GetBootVolume( &bootVolume );
+	
+		// Setting the query to look in the boot volume
+	categoryQuery->SetVolume( &bootVolume );
+	
+		// Construct the predicate
+	categoryQuery->PushAttr( "Category" );
+	categoryQuery->PushString( source.String() );
+	categoryQuery->PushOp( B_EQ );
+	
+	
+	delete categoryQuery;
+	
+	return true;	
+}	// <-- end of function MergeCategories
 
 
 
@@ -401,7 +461,7 @@ ColorUpdateWindow::ColorUpdateWindow( const Category& catIn,
 	BWindow( BRect( 100, 100, 300, 500 ),
 			 title,
 			 B_MODAL_WINDOW,
-			 B_NOT_CLOSABLE | B_NOT_ZOOMABLE | B_NOT_RESIZABLE | B_NOT_MINIMIZABLE | B_ASYNCHRONOUS_CONTROLS | B_WILL_ACCEPT_FIRST_CLICK ),
+			 B_NOT_ZOOMABLE | B_NOT_RESIZABLE | B_NOT_MINIMIZABLE | B_ASYNCHRONOUS_CONTROLS | B_WILL_ACCEPT_FIRST_CLICK ),
 	originalString( catIn.categoryName ),
 	originalColor( catIn.categoryColor ),
 	labelView( NULL ),
@@ -518,6 +578,19 @@ ColorUpdateWindow::ColorUpdateWindow( const Category& catIn,
 	if ( ! item ) { /* Panic! */ exit(1); }
 	item->SetExplicitAlignment( BAlignment( B_ALIGN_RIGHT, B_ALIGN_MIDDLE ) );
 	
+	// Cancel label
+	BStringView* cancelLabel = new BStringView( BRect( 0, 0, 1, 1 ),
+												"Cancel label",
+												"To cancel, click \"Revert\" and then \"Ok\"." );
+	if ( !cancelLabel )
+	{
+		/* Panic! */
+		exit( 1 );
+	}
+	cancelLabel->ResizeToPreferred();
+	item = layout->AddView( cancelLabel, 0, 3, 3, 1 );
+	item->SetExplicitAlignment( BAlignment( B_ALIGN_CENTER, B_ALIGN_TOP ) );
+	
 	// Make "Ok" button the default
 	okButton->MakeDefault( true );
 	
@@ -528,7 +601,7 @@ ColorUpdateWindow::ColorUpdateWindow( const Category& catIn,
 	
 	colorControl->SetValue( originalColor );
 	colorControl->Invoke();
-	
+
 	// Show the window
 	if ( enableEditingLabel )
 	{
@@ -540,6 +613,9 @@ ColorUpdateWindow::ColorUpdateWindow( const Category& catIn,
 	}
 	this->CenterOnScreen();
 	this->Show();
+	
+	
+	this->PostMessage( kColorChanged );
 }	// <-- end of constructor from Category.
 
  
@@ -568,7 +644,7 @@ ColorUpdateWindow::ColorUpdateWindow( BPoint corner,
 	BWindow( BRect( 100, 100, 300, 500 ),
 			 title,
 			 B_MODAL_WINDOW,
-			 B_NOT_CLOSABLE | B_NOT_ZOOMABLE | B_NOT_RESIZABLE | B_NOT_MINIMIZABLE | B_ASYNCHRONOUS_CONTROLS | B_WILL_ACCEPT_FIRST_CLICK ),
+			 B_NOT_ZOOMABLE | B_NOT_RESIZABLE | B_NOT_MINIMIZABLE | B_ASYNCHRONOUS_CONTROLS | B_WILL_ACCEPT_FIRST_CLICK ),
 	originalString( label ),
 	originalColor( defaultColor),
 	labelView( NULL ),
@@ -691,6 +767,19 @@ ColorUpdateWindow::ColorUpdateWindow( BPoint corner,
 	
 	// Make "Ok" button the default
 	okButton->MakeDefault( true );
+	
+	// Cancel label
+	BStringView* cancelLabel = new BStringView( BRect( 0, 0, 1, 1 ),
+												"Cancel label",
+												"To cancel, click \"Revert\" and then \"Ok\"." );
+	if ( !cancelLabel )
+	{
+		/* Panic! */
+		exit( 1 );
+	}
+	cancelLabel->ResizeToPreferred();
+	item = layout->AddView( cancelLabel, 0, 3, 3, 1 );
+	item->SetExplicitAlignment( BAlignment( B_ALIGN_CENTER, B_ALIGN_TOP ) );
 	
 	// Now, find the correct place for this window. 
 	// We have one of the corners from constructor, we need to position the window
@@ -951,8 +1040,8 @@ void ColorUpdateWindow::MessageReceived( BMessage* in )
 			break;
 			
 		case kCategoryInvoked:
+			break;
 			
-
 		default:
 			BWindow::MessageReceived( in );
 	};
@@ -1263,8 +1352,8 @@ CategoryListView::CategoryListView( BRect frame, const char *name )
 	:
 	BListView( BRect( frame.left,
 					  frame.top,
-					  frame.right - B_V_SCROLL_BAR_WIDTH,
-					  frame.bottom - B_H_SCROLL_BAR_HEIGHT - 3 ),
+					  frame.right - ( B_V_SCROLL_BAR_WIDTH * 2 ),
+					  frame.bottom - ( B_H_SCROLL_BAR_HEIGHT * 2 ) ),
 			   name ),
 	scrollView( NULL )
 {
@@ -1403,6 +1492,7 @@ bool	CategoryListView::AddItem( CategoryListItem *toAdd )
 			testItem->UpdateColor( toAdd->GetColor() );
 			delete toAdd;
 			toAdd = NULL;
+			InvalidateItem( 0 );
 			return true;
 		}		
 	}
@@ -1441,6 +1531,7 @@ bool	CategoryListView::AddItem( CategoryListItem *toAdd )
 			testItem->UpdateColor( toAdd->GetColor() );
 			delete toAdd;
 			toAdd = NULL;
+			InvalidateItem( index );
 			return true;
 		}
 		
@@ -1454,7 +1545,9 @@ bool	CategoryListView::AddItem( CategoryListItem *toAdd )
 	}
 	
 	// If we got here, then all items are alphabetically less.
-	return BListView::AddItem( toAdd );
+	bool toReturn = BListView::AddItem( toAdd );
+	FixupScrollbars();
+	return toReturn;
 
 }	// <-- end of function CategoryListView::AddItem
 
@@ -1774,106 +1867,165 @@ CategoryMenuItem::CategoryMenuItem( const Category *categoryIn,
  *							"toChange" pointer and returned pointer point to the same
  *							BBitmap. 
  */
-BBitmap*	CategoryMenuItem::CreateIcon( const rgb_color color,
-										  BBitmap* toChange )
+BBitmap* CategoryMenuItem::CreateIcon(const rgb_color colorIn, BBitmap* toChange )
 {
-	BBitmap* toReturn = NULL;	//!< This is the value to be returned.
-	BRect tempRect;
-	float width, height, squareSide;
+	font_height fh;
+	BFont plainFont( be_plain_font );
+	plainFont.GetHeight( &fh );
 	
-	// Sanity check
-	if ( ( color == currentColor ) && ( this->icon ) )
+	int squareSize = ceilf( fh.ascent + fh.descent + fh.leading - 2 );	//!< Side of the square.
+	BRect rect(0, 0, squareSize, squareSize );
+	BBitmap* toReturn = NULL;
+	if ( !toChange )	// Checking availability of the input
 	{
-		toChange = icon;
-		return icon;
-	}
-	
-	// Get size of the square
-	this->GetContentSize( &width, &height );
-	squareSide = ceilf( height ) - 2;
-	
-	// Compare submitted bitmap to calculated size
-	if ( toChange )
-	{
-		tempRect = toChange->Bounds();
-		if ( ( tempRect.Width() != squareSide ) ||
-			 ( tempRect.Height() != squareSide ) )
+		toReturn = new BBitmap(rect, B_RGB32, true);
+	} else {
+		// It would be a good idea to check also the color space,
+		// but it may be changed by the BBitmap itself, so...
+		if ( ceilf ( ( toChange->Bounds() ).Width() ) != squareSize )
 		{
-			// Dimensions don't match - need to delete the bitmap and reallocate it
 			delete toChange;
-			tempRect.Set( 0, 0, squareSide, squareSide );
-			toChange = new BBitmap( tempRect, B_RGB32, true );
+			toChange = new BBitmap(rect, B_RGB32, true);
 			if ( !toChange )
 			{
 				/* Panic! */
 				exit(1);
-			}
-			
-			toReturn = toChange;
+			}			
 		}
-		else
-		{
-			/*!	\note	Note about color spaces
-			 *			Actually, even if the dimensions are correct, the existing
-			 *			BBitmap may be not suitable due to incorrect color space.
-			 *			However, BBitmap may change the color space on its own, (and
-			 *			probably will, since there's no much sense in having 32 bits
-			 *			per pixel for bitmap with only 2 colors - black for the frame
-			 *			and Category's color for the inside). Therefore, color space is
-			 *			not checked. It's assumed that existing color space is good enough.
-			 */
-			// Dimensions match, color space is not checked - continuing
-			toReturn = toChange;
-		}
-	}
-	else	// No bitmap is submitted
-	{
-		toReturn = new BBitmap( tempRect, B_CMAP8, true );
-		if ( !toReturn )
-		{
-			/* Panic! */
-			exit(1);
-		}
+		toReturn = toChange;
 	}
 	
-	/* Here toReturn is already set. */
-	
-	// Add the drawing view to the bitmap
-	tempRect.Set( 0, 0, squareSide, squareSide );
-	BView* drawing = new BView (tempRect,
+	BView* drawing = new BView( rect, 
 								"Drawer", 
 								B_FOLLOW_LEFT | B_FOLLOW_TOP,
 								B_WILL_DRAW);
-	if (!drawing || !toReturn) {
-		/* Panic! */
-		return NULL;
-	}	
+	if (!drawing || !toReturn) { return NULL; }	
 	toReturn->AddChild(drawing);
 	if (toReturn->Lock()) {
-
+		
 		// Clean the area
-		drawing->SetHighColor( ui_color( B_MENU_BACKGROUND_COLOR ) );
-		drawing->FillRect( tempRect );
+		drawing->SetHighColor( ui_color( B_DOCUMENT_BACKGROUND_COLOR ) );
+		drawing->FillRect(rect);
 		
 		// Draw the black square
-		drawing->SetHighColor( ui_color( B_MENU_ITEM_TEXT_COLOR ) );
-		drawing->SetPenSize( 1 );
-		drawing->StrokeRect( tempRect );
+		drawing->SetHighColor( ui_color( B_DOCUMENT_TEXT_COLOR ) );
+		drawing->SetPenSize(1);
+		drawing->StrokeRect(rect);
 		
 		// Fill the inside of the square
-		drawing->SetHighColor( color );
-		drawing->FillRect( tempRect.InsetBySelf( 1, 1 ) );
+		drawing->SetHighColor( colorIn );
+		drawing->FillRect(rect.InsetBySelf(1, 1));
 		
 		// Flush the actions to BBitmap
 		drawing->Sync();
-		toReturn->Unlock();	
+		toReturn->Unlock();
 	}
-
-	toReturn->RemoveChild( drawing );
+	toReturn->RemoveChild(drawing);			// Cleanup
 	delete drawing;
-
 	return toReturn;
-}	// <-- end of function "CategoryMenuItem::CreateIcon"
+}	// <-- end of function CategoryMenuItem::CreateIcon
+
+// 
+//BBitmap*	CategoryMenuItem::CreateIcon( const rgb_color color,
+//										  BBitmap* toChange )
+//{
+//	BBitmap* toReturn = NULL;	//!< This is the value to be returned.
+//	BRect tempRect;
+//	float width, height, squareSide;
+//	
+//	// Sanity check
+//	if ( ( color == currentColor ) && ( this->icon ) )
+//	{
+//		toChange = icon;
+//		return icon;
+//	}
+//	
+//	// Get size of the square
+//	this->GetContentSize( &width, &height );
+//	squareSide = ceilf( height ) - 2;
+//	
+//	// Compare submitted bitmap to calculated size
+//	if ( toChange )
+//	{
+//		tempRect = toChange->Bounds();
+//		if ( ( tempRect.Width() != squareSide ) ||
+//			 ( tempRect.Height() != squareSide ) )
+//		{
+//			// Dimensions don't match - need to delete the bitmap and reallocate it
+//			delete toChange;
+//			tempRect.Set( 0, 0, squareSide, squareSide );
+//			toChange = new BBitmap( tempRect, B_RGB32, true );
+//			if ( !toChange )
+//			{
+//				/* Panic! */
+//				exit(1);
+//			}
+//			
+//			toReturn = toChange;
+//		}
+//		else
+//		{
+//			/*!	\note	Note about color spaces
+//			 *			Actually, even if the dimensions are correct, the existing
+//			 *			BBitmap may be not suitable due to incorrect color space.
+//			 *			However, BBitmap may change the color space on its own, (and
+//			 *			probably will, since there's no much sense in having 32 bits
+//			 *			per pixel for bitmap with only 2 colors - black for the frame
+//			 *			and Category's color for the inside). Therefore, color space is
+//			 *			not checked. It's assumed that existing color space is good enough.
+//			 */
+//			// Dimensions match, color space is not checked - continuing
+//			toReturn = toChange;
+//		}
+//	}
+//	else	// No bitmap is submitted
+//	{
+//		toReturn = new BBitmap( tempRect, B_CMAP8, true );
+//		if ( !toReturn )
+//		{
+//			/* Panic! */
+//			exit(1);
+//		}
+//	}
+//	
+//	/* Here toReturn is already set. */
+//	
+//	// Add the drawing view to the bitmap
+//	tempRect.Set( 0, 0, squareSide, squareSide );
+//	BView* drawing = new BView (tempRect,
+//								"Drawer", 
+//								B_FOLLOW_LEFT | B_FOLLOW_TOP,
+//								B_WILL_DRAW);
+//	if (!drawing || !toReturn) {
+//		/* Panic! */
+//		return NULL;
+//	}	
+//	toReturn->AddChild(drawing);
+//	if (toReturn->Lock()) {
+//
+//		// Clean the area
+//		drawing->SetHighColor( ui_color( B_MENU_BACKGROUND_COLOR ) );
+//		drawing->FillRect( tempRect );
+//		
+//		// Draw the black square
+//		drawing->SetHighColor( ui_color( B_MENU_ITEM_TEXT_COLOR ) );
+//		drawing->SetPenSize( 1 );
+//		drawing->StrokeRect( tempRect );
+//		
+//		// Fill the inside of the square
+//		drawing->SetHighColor( color );
+//		drawing->FillRect( tempRect.InsetBySelf( 1, 1 ) );
+//		
+//		// Flush the actions to BBitmap
+//		drawing->Sync();
+//		toReturn->Unlock();	
+//	}
+//
+//	toReturn->RemoveChild( drawing );
+//	delete drawing;
+//
+//	return toReturn;
+//}	// <-- end of function "CategoryMenuItem::CreateIcon"
 
 
 /*!	
@@ -1987,9 +2139,6 @@ CategoryMenu::CategoryMenu( const char *name,
 	BMenu( name, B_ITEMS_IN_COLUMN ),
 	bWithSeparator( withSeparator )
 {
-	this->SetRadioMode( true );
-	this->SetLabelFromMarked( true );
-	
 	RefreshMenu( preferences );	// Populate the menu.	
 	
 	if ( withSeparator )
@@ -2001,7 +2150,8 @@ CategoryMenu::CategoryMenu( const char *name,
 			exit( 1 );
 		}
 		BMenu::AddItem( separator );
-		separator->SetMarked( true );
+		this->SetLabelFromMarked( false );
+		this->SetRadioMode( false );
 	}
 	else
 	{
@@ -2014,6 +2164,8 @@ CategoryMenu::CategoryMenu( const char *name,
 		{
 			( this->ItemAt( 0 ) )->SetMarked( true );
 		}
+		this->SetRadioMode( true );
+		this->SetLabelFromMarked( true );
 	}
 }	// <-- end of constructor for CategoryMenu
 
