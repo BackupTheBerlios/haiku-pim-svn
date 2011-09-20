@@ -31,7 +31,7 @@ SRCS= 	clsApp.cpp \
 		
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
-RSRCS= 
+RSRCS= Resources.rsrc
 
 #	specify additional libraries to link against
 #	there are two acceptable forms of library specifications
@@ -47,7 +47,9 @@ LIBS= 	be \
 		stdc++	\
 		TimeRepresentation \
 		CalendarModule \
-		CalendarControl
+		CalendarControl	\
+		CategoryItem	\
+		Utilities
 		
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
@@ -66,9 +68,11 @@ SYSTEM_INCLUDE_PATHS =
 #	additional paths to look for local headers
 #	thes use the form: #include "header"
 #	source file directories are automatically included
-LOCAL_INCLUDE_PATHS = ../CalendarControl	\
+LOCAL_INCLUDE_PATHS = ../CalendarControl.new	\
 		../TimeRepresentation	\
-		../CalendarModule
+		../CalendarModule		\
+		../Utilities			\
+		../CategoryItem
 
 #	specify the level of optimization that you desire
 #	NONE, SOME, FULL
@@ -105,3 +109,5 @@ LINKER_FLAGS =
 ## include the makefile-engine
 include /boot/develop/etc/makefile-engine
 
+copy:
+	cp objects.x86-gcc4-debug/TestApp .

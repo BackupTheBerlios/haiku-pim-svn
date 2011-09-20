@@ -3,11 +3,13 @@
 	
 	#include "globals.h"
 
-	#define ApplicationSignature "application/x-vnd.generic-SkeletonApplication"
+	#define ApplicationSignature "application/x-vnd.Hitech.Skeleton"
 
 	#include <Application.h>
 	
 	#include "clsMainWindow.h"
+	
+	class MainView;
 	
 	class clsApp
 	:
@@ -20,6 +22,8 @@
 		virtual void Pulse();
 	private:
 		clsMainWindow *iMainWindow;
+		
+	friend class MainView;
 	};
 	
 #endif

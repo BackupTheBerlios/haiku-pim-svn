@@ -3,11 +3,18 @@
  * All rights reserved. Distributed under the terms of the MIT license.
  */
 #include <ctype.h> 
+#include <string.h>
 
 #include <List.h>
 #include <String.h>
 
 #include "Utilities.h"
+
+
+/*!	\brief		Debugging printout - defined once and globally.
+ */
+DebuggerPrintout		*utl_Deb = NULL;
+
 
 /*!
  *	\brief		List that holds all categories in the system. 
@@ -17,6 +24,9 @@
  *	\sa			::PopulateListOfCategories( BMessage* in )
  */
 BList global_ListOfCategories;
+
+
+BList global_ListOfCalendarModules( NUMBER_OF_CALENDAR_MODULES );
 
 
 /*!	\function 	utl_CheckStringValidity
@@ -79,6 +89,31 @@ bool utl_CheckStringValidity( BString& toCheck )
 }	// <-- end of function "utl_CheckStringValidity"
 
 
+/*!	\brief		Find calendar module based on its ID.
+ *	\param[in]	id	The identifier of the Calendar Module.
+ *	\returns	Valid pointer to calendar module object, if it is found.
+ *				NULL, if it's not.
+ */
+CalendarModule* 	utl_FindCalendarModule( const BString& id )
+{
+	int index, limit;
+	CalendarModule* testing;
+	
+	limit = global_ListOfCalendarModules.CountItems();
+	
+	for ( index = 0; index < limit; ++index )
+	{
+		testing = ( CalendarModule* )global_ListOfCalendarModules.ItemAt( index );
+		if ( testing->Identify() == id )
+		{
+			return testing;	
+		}
+	}
+	
+	return NULL;	
+}	// <-- end of function FindCalendarModule
+
+
 
 uint32	RepresentColorAsUint32( rgb_color color )
 {
@@ -107,6 +142,84 @@ rgb_color RepresentUint32AsColor( uint32 in )
 	toReturn.alpha = 	( in & 0x000000FF );
 	return toReturn;
 }
+
+
+/*!	\brief		Syntactically verify a string for being an Email address.
+ *		\details		This recipe is an adopted code from the book
+ *						"Secure Programming Cookbook for C and C++" by 
+ *						John Viega and Matt Messier. It can be found as Recipe 3.9
+ *						beginning on page 101.
+ *		\returns		"true" if the string looks like an Email address, "false" otherwise.
+ */
+bool utl_VerifyEmailAddress( const char *address )
+{
+  int        count = 0;
+  const char *c, *domain;
+  static char *rfc822_specials = "()<>@,;:\\\"[]";
+
+  /* first we validate the name portion (name@domain) */
+  for ( c = address;  *c;  c++ ) 
+  {
+    if ( ( *c == '\"' ) && 
+    	   ( c == address || *(c - 1) == '.' || *(c - 1) == '\"' ) )
+   {
+      while (*++c) {
+        if (*c == '\"') break;
+        if (*c == '\\' && (*++c == ' ')) continue;
+        if (*c < ' ' || *c >= 127) return false;
+      }
+      if (!*c++) return false;
+      if (*c == '@') break;
+      if (*c != '.') return false;
+      continue;
+    }
+    if (*c == '@') break;
+    if (*c <= ' ' || *c >= 127) return false;
+    if ( strchr( rfc822_specials, *c ) ) return false;
+  }
+  if (c == address || *(c - 1) == '.') return false;
+
+  /* next we validate the domain portion (name@domain) */
+  if (!*(domain = ++c)) return false;
+  do {
+    if (*c == '.') {
+      if (c == domain || *(c - 1) == '.') return false;
+      count++;
+    }
+    if (*c <= ' ' || *c >= 127) return false;
+    if (strchr(rfc822_specials, *c)) return false;
+  } while (*++c);
+
+  return (count >= 1);
+}	// <-- end of function utl_VerifyEmailAddress
+
+
+/*!	\brief		Verify a server address or IP.
+ *		\details		Based on the function utl_VerifyEmailAddress.
+ *		\note			Implementation details
+ *						This function does not test DNS or pings the server. It just
+ *						checks the address looks correct.
+ *		\returns		"true" if the address looks Ok, "false" otherwise.
+ */
+bool		utl_VerifySeverAddress( const char* address )
+{
+  int        count = 0;
+  const char *c, *domain;
+  static char *rfc822_specials = "()<>@,;:\\\"[]";
+	
+  if (!*(domain = ++c)) return false;
+  do {
+    if (*c == '.') {
+      if (c == domain || *(c - 1) == '.') return false;
+      count++;
+    }
+    if (*c <= ' ' || *c >= 127) return false;
+    if (strchr(rfc822_specials, *c)) return false;
+  } while (*++c);
+
+  return (count >= 1);
+}	// <-- end of function utl_VerifySeverAddress
+
 
 
 /* This message loads upon startup and is saved by the Preferences preflet.

@@ -1,6 +1,9 @@
 #ifndef _globals_h
 #define _globals_h
 	#include <InterfaceKit.h>
+	#include <stdlib.h>
+	#include <stdio.h>
+	#include "CategoryItem.h"
 	
 	extern int AppReturnValue;
 	

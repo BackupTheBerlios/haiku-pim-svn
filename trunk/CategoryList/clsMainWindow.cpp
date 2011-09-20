@@ -1,5 +1,7 @@
 #include "clsMainWindow.h"
 
+#include <GroupLayout.h>
+#include <LayoutItem.h>
 
 MainView::MainView(BRect frame) 
 	:
@@ -11,12 +13,21 @@ MainView::MainView(BRect frame)
 	this->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
 	BRect tempRect = this->Bounds();
 	tempRect.InsetBy(5, 5);
-	tempRect.right -= B_V_SCROLL_BAR_WIDTH;
+	
+	CategoryListView* listView = new CategoryListView( tempRect, "list" );
+	if ( !listView )
+	{
+		/* Panic! */
+		exit(1);
+	}
+	
+/*	tempRect.right -= B_V_SCROLL_BAR_WIDTH;
 	tempRect.bottom -= B_H_SCROLL_BAR_HEIGHT;
 	
 	BListView* listView = new BListView(tempRect, "list");
 	if (!listView) { exit(1); }
 	
+*/
 	this->scrollView = new BScrollView("scroll",
 			listView,
 			B_FOLLOW_LEFT | B_FOLLOW_TOP,
@@ -24,7 +35,9 @@ MainView::MainView(BRect frame)
 			true, true);
 
 	if (!scrollView) { exit(1); }
-	((BScrollBar*)(scrollView->ScrollBar(B_VERTICAL)))->SetSteps(5, 20);
+	
+	listView->SetScroller( scrollView );
+/*	((BScrollBar*)(scrollView->ScrollBar(B_VERTICAL)))->SetSteps(5, 20);
 	((BScrollBar*)(scrollView->ScrollBar(B_HORIZONTAL)))->SetSteps(5, 20);
 
 	 
@@ -70,39 +83,76 @@ MainView::MainView(BRect frame)
 				false);
 	if (!item) { exit(1); }
 	listView->AddItem(item);
+*/	
+	rgb_color red = { 255, 0, 0, 255 };
+	BString catName = "CategoryListItem";
+	
+	BListItem* listItem = new CategoryListItem( red, catName );
+	if ( !listItem ) { exit(1); }
+	listView->AddItem( listItem );
+	
+//	listView->ResizeToPreferred();
 	
 	
-	this->AddChild(scrollView);
-	FixupScrollbars();
+	BGroupLayout* layout = new BGroupLayout( B_VERTICAL );
+	if (!layout ) { /* Panic! */  exit(1); }
+	this->SetLayout( layout );
+	layout->SetInsets( 5, 5, 5, 5 );
+	
+	layout->AddView( scrollView );
+	
+	CategoryMenu* catMenu = new CategoryMenu( "CatMenu", NULL );
+	
+	CategoryMenuItem* item1 = new CategoryMenuItem( catName, red, NULL );
+	
+	catMenu->AddItem( item1 );
+	
+	BString menuName("Categories");
+	BMenuField* menuField = new BMenuField( BRect( 0, 0, 1, 1),
+											"Menu field",
+											menuName,
+											catMenu );
+	menuField->ResizeToPreferred();
+	layout->AddView( menuField );
+	
+	
+	// this->AddChild(scrollView);
+	// FixupScrollbars();
 }
 
 void MainView::FrameResized(float width, float height) {
 	BView::ResizeTo(width, height);
+	
+/*	return;
+	
 	if (scrollView) {
 		scrollView->ResizeTo(width-5, height-5);
 	}
 	width  -= (B_H_SCROLL_BAR_HEIGHT+9);
 	height -= (B_V_SCROLL_BAR_WIDTH+9);
-	BView* list = FindView("list");
+*/	BView* list = FindView("list");
 	if (list) {
 		list->ResizeTo(width, height);
 	}
 
-	FixupScrollbars();
+//	FixupScrollbars();
 }
 	
 void MainView::AttachedToWindow(void) {
 	BView::AttachedToWindow();
-	BView* child = this->ChildAt(0);
+/*	BView* child = this->ChildAt(0);
 	while (!child) {
 		child->AttachedToWindow();
 		child->NextSibling();
 	}
+*/
 }
 
 
 void MainView::FixupScrollbars()
 {
+	return;
+	
 	BRect bounds=(Bounds()).InsetBySelf(5, 5);
 	bounds.right -= B_V_SCROLL_BAR_WIDTH;
 	bounds.bottom -= B_H_SCROLL_BAR_HEIGHT;
@@ -149,7 +199,7 @@ clsMainWindow::clsMainWindow(const char *uWindowTitle)
 		B_TITLED_WINDOW,
 		0	)
 {
-	mainView = new MainView(BWindow::Bounds());
+	mainView = new MainView(this->Bounds());
 			
 	if (mainView != NULL)
 	{

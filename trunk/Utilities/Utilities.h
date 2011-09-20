@@ -9,23 +9,61 @@
 #include <GraphicsDefs.h>
 #include <SupportDefs.h>
 
+#include "TimeRepresentation.h"
+#include "CalendarModule.h"
 
 
+/*---------------------------------------------------------------------------------
+ *			Calendar modules section
+ *--------------------------------------------------------------------------------*/
 #define		NUMBER_OF_CALENDAR_MODULES		1
 
+extern BList global_ListOfCalendarModules;	//!< List of all calendar modules in the system.
+
+CalendarModule*		utl_FindCalendarModule( const BString& id );
+
+/*---------------------------------------------------------------------------------
+ *			Categories section
+ *--------------------------------------------------------------------------------*/
+
 extern BList global_ListOfCategories;	//!< List that holds all categories in the system.
+
+
+/*---------------------------------------------------------------------------------
+ *			Preferences section
+ *--------------------------------------------------------------------------------*/
 
 const uint32 kGlobalPreferences = 'PREF';	//!< ID of the global preferences.
 extern BMessage global_Preferences;		//!< Message with all existing preferences.
 
 
-/*!	\funciton	RepresentColorAsUint32
+/*---------------------------------------------------------------------------------
+ *			Service routines section
+ *--------------------------------------------------------------------------------*/
+
+bool 	utl_CheckStringValidity( BString& input );
+
+	/* Syntactical verification of Email address */
+bool	utl_VerifyEmailAddress( const char* );
+
+	/* Syntactical verification of server address */
+bool	utl_VerifySeverAddress( const char* address );
+
+/*!	\brief		Allows easy convertion of uint32 to a set of chars and vice versa.
+ */
+union UintToChar {
+	char    chars[4];
+	uint32	integer;	
+};
+
+
+/*!
  *	\brief		Allows to refer to rgb_color to as uint32
  */
 uint32			RepresentColorAsUint32( rgb_color color );
 rgb_color		RepresentUint32AsColor( uint32 set );
 
-/*!	\class		DebuggerPrintout
+/*!
  *	\brief		A short debugging message
  *	\details	Based on BAlert class
  */
@@ -44,15 +82,10 @@ private:
 
 };
 
-bool utl_CheckStringValidity( BString& input );
+extern DebuggerPrintout* utl_Deb;
 
 
 
-
-union UintToChar {
-	char    chars[4];
-	uint32	integer;	
-};
 
 
 

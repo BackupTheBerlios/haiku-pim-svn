@@ -1,11 +1,18 @@
 #include <String.h>
 #include <Alert.h>
 #include <Point.h>
+#include <Message.h>
+#include <InterfaceKit.h>
+//#include <ApplicationKit.h>
 
+#include "clsApp.h"
 #include "clsMainWindow.h"
 #include "CalendarControl.h"
 #include "GregorianCalendarModule.h"
+#include "CategoryItem.h"
+#include "Utilities.h"
 
+#include <stdio.h>
 
  
 MainView::MainView(BRect frame) 
@@ -18,11 +25,13 @@ MainView::MainView(BRect frame)
 	this->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
 	BRect tempRect = this->Bounds();
 	tempRect.InsetBy(5, 5);
-	tempRect.bottom = tempRect.top+20;
+	tempRect.bottom = tempRect.top+70;
 	
 	GregorianCalendar* gregCal = new GregorianCalendar();
 	if (!gregCal) { exit(1); }
 	listOfCalendarModules.AddItem((void*)gregCal);
+	
+	
 	
 	CalendarControl* cont = new CalendarControl(tempRect,
 				"calendar",
@@ -31,71 +40,37 @@ MainView::MainView(BRect frame)
 	this->AddChild(cont);
 	AttachedToWindow();
 	cont->AttachedToWindow();
-/*
-	tempRect.right -= B_V_SCROLL_BAR_WIDTH;
-	tempRect.bottom -= B_H_SCROLL_BAR_HEIGHT;
 	
-	BListView* listView = new BListView(tempRect, "list");
-	if (!listView) { exit(1); }
+	tempRect.top = tempRect.bottom + 205;
+	tempRect.bottom = tempRect.top + 70;
 	
-	this->scrollView = new BScrollView("scroll",
-			listView,
-			B_FOLLOW_LEFT | B_FOLLOW_TOP,
-			B_FRAME_EVENTS,
-			true, true);
-
-	if (!scrollView) { exit(1); }
-	((BScrollBar*)(scrollView->ScrollBar(B_VERTICAL)))->SetSteps(5, 20);
-	((BScrollBar*)(scrollView->ScrollBar(B_HORIZONTAL)))->SetSteps(5, 20);
-
-	 
-	BBitmap *icon = NULL;
-	icon = CreateIcon(kBlue);
-	IconListItem *item = new IconListItem(icon,
-										  "Test1",
-										  0,
-										  false);											  
-	if (!item) { exit(1); }
+	HourMinControl* hmControl = new HourMinControl( tempRect,
+													"time",
+													"Time:" );
+	if ( !hmControl ) { exit(1); }
+	printf ("HMcontrol created successfully\n");
+	this->AddChild( hmControl );
+	AttachedToWindow();
+	hmControl->AttachedToWindow();
 	
-	listView->AddItem(item);
+	rgb_color color;
+	color.set_to( 0, 0, 1, 255 );
+	BString string1("Attempt патамучто Ыыы!"), string2("Category editor");
 	
-	icon = CreateIcon(kMagen);
-	item = new IconListItem(icon,
-						  "Test2",
-						  0,
-						  false);											  
-	if (!item) { exit(1); }
-	listView->AddItem(item);
+	ColorUpdateWindow* updateWindow = new ColorUpdateWindow( BPoint( 90, 90 ),
+															 string1,
+															 color,
+															 true,
+															 string2,
+															 ( BLooper*)this->Window() );
+	if ( updateWindow )
+	{
+//		updateWindow->Show();
+	}
+															 
+															 
 	
-	icon = CreateIcon(kWhite);
-	item = new IconListItem(icon,
-						  "White icon",
-						  0,
-						  false);											  
-	if (!item) { exit(1); }
-	listView->AddItem(item);
-	
-	icon = CreateIcon(kMedGray);
-	item = new IconListItem(icon,
-						  "Категория на русском",
-						  0,
-						  false);											  
-	if (!item) { exit(1); }
-	listView->AddItem(item);
-
-	BString categoryName("Категория с именем из BString");
-	icon = CreateIcon(kBlue);	
-	item = new IconListItem(icon,
-				categoryName.String(),
-				0,
-				false);
-	if (!item) { exit(1); }
-	listView->AddItem(item);
-	
-	
-	this->AddChild(scrollView);
-	FixupScrollbars();
-*/
+//	cont->SetEnabled(false);
 }
 
 void MainView::FrameResized(float width, float height) {
@@ -104,20 +79,6 @@ void MainView::FrameResized(float width, float height) {
 	for (int i = 0; i < this->CountChildren(); i++) {
 		((BView*)(this->ChildAt(i)))->FrameResized(width, height);
 	}
-	
-	
-/*	if (scrollView) {
-		scrollView->ResizeTo(width-5, height-5);
-	}
-	width  -= (B_H_SCROLL_BAR_HEIGHT+9);
-	height -= (B_V_SCROLL_BAR_WIDTH+9);
-	BView* list = FindView("list");
-	if (list) {
-		list->ResizeTo(width, height);
-	}
-
-	FixupScrollbars();
-*/
 }
 	
 void MainView::AttachedToWindow(void) {
@@ -132,49 +93,12 @@ void MainView::AttachedToWindow(void) {
 
 void MainView::FixupScrollbars()
 {
-/*	BRect bounds=(Bounds()).InsetBySelf(5, 5);
-	bounds.right -= B_V_SCROLL_BAR_WIDTH;
-	bounds.bottom -= B_H_SCROLL_BAR_HEIGHT;
-	BScrollBar *sb;
-	BListView* listView = (BListView*)this->FindView("list");
-	float ratio=1, realRectWidth=1, realRectHeight=1;
-	if (!listView || !scrollView) { return; }
-
-	listView->GetPreferredSize(&realRectWidth, &realRectHeight);
-	
-	realRectHeight = listView->CountItems() * 18;
-	realRectWidth += 15 + B_V_SCROLL_BAR_WIDTH;
-	
-	sb = scrollView->ScrollBar(B_HORIZONTAL);
-	if (sb) {
-		ratio = bounds.Width() / (float)realRectWidth;		
-
-		sb->SetRange(0, realRectWidth-bounds.Width());	
-		if (ratio >= 1) {
-			sb->SetProportion(1);
-		} else {
-			sb->SetProportion(ratio);
-		}
-	}
-
-	sb = scrollView->ScrollBar(B_VERTICAL);
-	if (sb) {
-		ratio = bounds.Height() / (float)realRectHeight;
-		
-		sb->SetRange(0, realRectHeight+2);
-		if (ratio >= 1) {
-			sb->SetProportion(1);
-		} else {
-			sb->SetProportion(ratio);
-		}
-	}
-*/
 }
 
 clsMainWindow::clsMainWindow(const char *uWindowTitle)
 :
 	BWindow(
-		BRect(64, 64, 320, 256),
+		BRect(64, 64, 320, 560),
 		uWindowTitle,
 		B_TITLED_WINDOW,
 		0	)
@@ -226,9 +150,14 @@ BBitmap* MainView::CreateIcon(const rgb_color colorIn)
 
 void clsMainWindow::MessageReceived(BMessage * Message)
 {
-	BAlert* al;
-	BString sb;
+	DebuggerPrintout* deb = NULL;
+	bool dirty = false;
+	BString sb, tempString;
 	BPoint pt;
+	
+	sb << "New message has arrived! What = 0x" << Message->what;
+	deb = new DebuggerPrintout( sb.String() );
+	
 	switch(Message->what)
 	{
 /*		case (B_MOUSE_DOWN):
@@ -237,7 +166,17 @@ void clsMainWindow::MessageReceived(BMessage * Message)
 			al = new BAlert("AAA", sb.String(), "Ok");
 			if (al) al->Go();
 */	
+		case kColorSelected:
+			deb = new DebuggerPrintout("Color selected message arrived!");
+			
+			Message->FindBool( "Dirty", &dirty );
+			Message->FindString( "New string", &tempString );
+			
+			sb << "Dirty: " << dirty << ", new string: " << tempString;
+			deb = new DebuggerPrintout( sb.String() );
+			
 		default:
+			
 		  BWindow::MessageReceived(Message);
 		  break;
 	}
