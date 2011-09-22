@@ -307,6 +307,7 @@ BMessage* 		PackPreferencesIntoMessage( const BString& id )
 }	// <-- end of function PackPreferencesIntoMessage
 
 
+
 /*!	\brief		Return pointer to the original preferences.
  *		\details		As opposed to modified preferences, the original preferences
  *						are hidden. Well, not actually hidden, but not easily accessible.
@@ -617,6 +618,37 @@ BList*	CalendarModulePreferences::GetWeekends() const
 	} 
 	return toReturn;
 }	// <-- end of function CalendarModulePreferences::GetWeekends
+
+
+
+/*!	\brief		Returns color of the selected configuration
+ *		\returns		Color associated with the input
+ *		\param[in]	weekends		If "true", looking at weekends, else at weekdays.
+ *		\param[in]	viewer		If "true", looking at settings for Event Viewer, else for controls.
+ */
+rgb_color CalendarModulePreferences::GetColor( bool weekends, bool viewer ) const
+{
+	if ( weekends ) {
+		if ( viewer ) { return this->weekendsColorForViewer; } else { return weekendsColorForMenu; }
+	} else {
+		if ( viewer ) { return this->weekdaysColorForViewer; } else { return weekdaysColorForMenu; }
+	}
+}
+
+
+/*!	\brief		Update color of the selected configuration
+ *		\param[in]	color			The new value
+ *		\param[in]	weekends		If "true", updating weekends, else updating weekdays.
+ *		\param[in]	viewer		If "true", updating settings for Event Viewer, else for controls.
+ */
+void		CalendarModulePreferences::SetColor( rgb_color color, bool weekends, bool viewer )
+{
+	if ( weekends ) {
+		if ( viewer ) { weekendsColorForViewer = color; } else { weekendsColorForMenu = color; }
+	} else {
+		if ( viewer ) { weekdaysColorForViewer = color; } else { weekdaysColorForMenu = color; }
+	}
+}	// <-- end of function CalendarModulePreferences::SetColor
 
 
 

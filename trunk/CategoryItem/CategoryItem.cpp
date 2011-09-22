@@ -877,7 +877,6 @@ ColorUpdateWindow::~ColorUpdateWindow()
  */
 void ColorUpdateWindow::MessageReceived( BMessage* in )
 {
-	DebuggerPrintout* deb = NULL;	//!< Debugger printout
 	BAlert* al = NULL;				//!< User for notifying the user (as opposed to developer)
 	BTextView* textView = NULL;		
 	BView* background = NULL;		//!< Background of the ColorUpdateWindow.
@@ -895,6 +894,7 @@ void ColorUpdateWindow::MessageReceived( BMessage* in )
 			if ( colorControl )
 			{
 				currentColor = colorControl->ValueAsColor();
+				
 				if ( currentColor != originalColor )
 				{
 					this->dirty = true;
@@ -965,7 +965,7 @@ void ColorUpdateWindow::MessageReceived( BMessage* in )
 			}
 
 			messageToSend->AddInt32( "Original color", RepresentColorAsUint32( this->originalColor ) );
-			messageToSend->AddInt32( "New color", RepresentColorAsUint32( this->currentColor ) );
+			messageToSend->AddInt32( "New color", RepresentColorAsUint32( currentColor ) );
 			
 			// Send the message and close current window
 			// mesg = new BMessenger( (BHandler* )target, NULL,  &errorCode );
@@ -974,7 +974,7 @@ void ColorUpdateWindow::MessageReceived( BMessage* in )
 			if ( errorCode == B_OK ) {
 				errorCode = mesg->SendMessage( messageToSend, ( BHandler* )target );
 			} else {
-				deb = new DebuggerPrintout( "Message wasn't sent" );
+				utl_Deb = new DebuggerPrintout( "Message wasn't sent" );
 			}
 			
 			this->Quit();
@@ -1005,7 +1005,7 @@ void ColorUpdateWindow::MessageReceived( BMessage* in )
 			background = this->FindView( "Background" );
 			if ( ! background )
 			{
-				deb = new DebuggerPrintout( "Didn't find background!" );
+				utl_Deb = new DebuggerPrintout( "Didn't find background!" );
 				return;
 			}
 			previousHighColor = background->HighColor();
@@ -1352,8 +1352,8 @@ CategoryListView::CategoryListView( BRect frame, const char *name )
 	:
 	BListView( BRect( frame.left,
 					  frame.top,
-					  frame.right - ( B_V_SCROLL_BAR_WIDTH * 2 ),
-					  frame.bottom - ( B_H_SCROLL_BAR_HEIGHT * 2 ) ),
+					  frame.right - ( B_V_SCROLL_BAR_WIDTH * 2 ) - 10,
+					  frame.bottom - ( B_H_SCROLL_BAR_HEIGHT ) ),
 			   name ),
 	scrollView( NULL )
 {

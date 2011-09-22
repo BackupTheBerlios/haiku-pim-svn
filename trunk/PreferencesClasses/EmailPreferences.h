@@ -35,6 +35,11 @@ class EmailPreferences
 		
 		virtual status_t		Archive( BMessage* out ) const;
 		
+		virtual BString		GetReplyToAddress() const { return replyToAddress; }
+		virtual BString		GetMailServerAddress() const { return mailServerAddress; }
+		virtual uint32			GetMailServerPort() const { return mailServerPort; }
+		virtual BString		GetMailServerPortAsString() const { BString port; port << mailServerPort; return port; }
+		
 		virtual status_t		UpdateMailServerAddress( const BString& in );
 		virtual status_t		UpdateReplyToAddress( const BString& in );
 		virtual status_t		UpdateMailServerPort( const BString& in );

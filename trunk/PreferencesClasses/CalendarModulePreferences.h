@@ -107,7 +107,8 @@ public:
 	
 	virtual void 	AddToWeekends (uint32 day);
 	virtual void	RemoveFromWeekends	( uint32 day );
-	virtual BList* 	GetWeekends (void) const;
+	virtual BList* 		GetWeekends (void) const;
+	inline virtual int	GetNumberOfWeekends( void ) const { return weekends->CountItems(); }
 
 	inline virtual void 	SetFirstDayOfWeek(uint32 day) {
 		ucFirstDayOfWeek = day;
@@ -116,22 +117,8 @@ public:
 		return ucFirstDayOfWeek;
 	}
 	
-	inline virtual void 	SetColor( rgb_color	color, bool weekends = true, bool viewer = true ) 
-	{
-		if ( weekends ) {
-			if ( viewer ) { weekendsColorForViewer = color; } else { weekendsColorForMenu = color; }
-		} else {
-			if ( viewer ) { weekdaysColorForViewer = color; } else { weekdaysColorForMenu = color; }
-		}
-	}
-	
-	rgb_color	GetColor( bool weekends = true, bool viewer = true ) const {
-		if ( weekends ) {
-			if ( viewer ) { return weekendsColorForViewer; } else { return weekendsColorForMenu; }
-		} else {
-			if ( viewer ) { return weekdaysColorForViewer; } else { return weekdaysColorForMenu; }
-		}
-	}
+	virtual void 	SetColor( rgb_color	color, bool weekends = true, bool viewer = true );
+	virtual rgb_color GetColor( bool weekends = true, bool viewer = true ) const;
 	
 	virtual CalendarModulePreferences operator= (const CalendarModulePreferences& other);
 	
