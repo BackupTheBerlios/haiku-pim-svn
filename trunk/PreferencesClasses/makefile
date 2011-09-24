@@ -31,7 +31,8 @@ TYPE= SHARED
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
 SRCS= CalendarModulePreferences.cpp			\
-		EmailPreferences.cpp
+		EmailPreferences.cpp						\
+		Preferences.cpp
 	  
 
 #	specify the resource definition files to use

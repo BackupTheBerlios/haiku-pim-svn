@@ -26,6 +26,7 @@
  ***************************************************************************/
 
 	/*!	\brief	Original (loaded from file) preferences for every calendar module */
+static 
 CalendarModulePreferences*	pref_CalendarModulePrefs_original[ NUMBER_OF_CALENDAR_MODULES ];
 
 	/*!	\brief	Modified by the user preferences for every calendar module */
@@ -94,8 +95,15 @@ void			pref_PopulateCalendarModulePreferences( BMessage* in )
 		else
 		{
 			// Found the data - parse it to create the preferences
+			
 			pref_CalendarModulePrefs_original[ index ] = new CalendarModulePreferences( calModule->Identify(), &preferences );
-			pref_CalendarModulePrefs_modified[ index ] = new CalendarModulePreferences( *pref_CalendarModulePrefs_original[ index ] );
+			pref_CalendarModulePrefs_modified[ index ] = new CalendarModulePreferences( calModule->Identify(), &preferences );
+			if ( pref_CalendarModulePrefs_modified[index]->InitCheck() != B_OK )
+			{
+				sb.SetTo( "Error - didn't initialize the prefs! " );
+				sb << "Error = " << pref_CalendarModulePrefs_modified[index]->InitCheck();
+				utl_Deb = new DebuggerPrintout( sb.String() );
+			}
 		}
 	}	// <-- end of "for ( every possible Calendar Module, read its preferences )	
 }	// <-- end of function PopulateCalendarModulePreferences
@@ -110,11 +118,9 @@ void			pref_PopulateCalendarModulePreferences( BMessage* in )
  *						No-one can touch original preferences.
  */
 CalendarModulePreferences*		pref_GetPreferencesForCalendarModule( const BString& id )
-{
-	if ( id == "" )  return NULL;
-	
+{	
 	CalendarModulePreferences* toReturn = NULL, *inTest = NULL;
-		
+	
 	for ( int index = 0; index < NUMBER_OF_CALENDAR_MODULES; ++index )
 	{
 		inTest = pref_CalendarModulePrefs_modified[ index ];
@@ -138,71 +144,18 @@ CalendarModulePreferences*		pref_GetPreferencesForCalendarModule( const BString&
  *						If the message didn't contain data on specific Calendar Module
  *						preferences, the modified version is saved anyway.
  *		\param[out]		message	The message to which the preferences should be attached.
- *		\param[in]		id		Identifier of specific calendar module. If empty string,
- *									all preferences are saved.
  *		\returns		B_OK if everything was Ok.
  */
-status_t		pref_SaveCalendarModulePreferences( BMessage* message,
-																const BString& id )
+status_t		pref_SaveCalendarModulePreferences( BMessage* message )
 {
 	status_t	status = B_OK;
-	BMessage* toAdd;
-	BMessage* out = dynamic_cast< BMessage* >( message );
-	if ( ! message || ! out ) {
-		/* Nothing to do */
-		return B_ERROR;
-	}
+	BMessage* toAdd = NULL;
 	
 	CalendarModulePreferences *prefOrig = NULL, *prefModif = NULL;
 	CalendarModule *module;
-	BString toFetch = id, sb;
-	
-		/* Trying to save preferences only for single module.
-		 * If anything goes wrong, the "return" in this "if" section
-		 * will not be executed, and we'll try to save all preferences.
-		 */
-
-	if ( id != "" )
-	{
-		// Find the modified preferences
-		prefModif = pref_GetPreferencesForCalendarModule( toFetch );
+	BString toFetch, sb;
 		
-		// Find the original preferences.
-		prefOrig = GetOriginalPreferencesForCalendarModule( toFetch );
-		
-		// Pack the modified preferences into message.
-		toAdd = PackPreferencesIntoMessage( toFetch );
-
-		// Prepare the name of the field
-		sb.SetTo( "CalendarModulePreferences" );
-		sb << toFetch;
-		
-		// Compare and decide if the preferences should be saved.
-		if ( toAdd && prefModif &&
-		     ( !prefOrig || prefOrig != prefModif ) )
-		{
-			// We should save the message.
-			/*!	\note		Warning!
-			 *					Relying on obsolete code here!
-			 */
-			if ( B_OK == message->HasMessage( sb.String() ) )
-			{
-				// The message needs replacement				
-				status = message->ReplaceMessage( sb.String(), toAdd );
-			}
-			else
-			{
-				// The message must be added - there was no previous copy
-				status = message->AddMessage( sb.String(), toAdd );
-				
-			}
-			return status;
-		
-		}	// <-- end of "if ( we should actually save the preferences )"
-	}	// <-- end of "something was submitted as the ID of the module to be saved".
-	
-		/* If we got here, we should save all preferences
-		 * for all calendar modules in the system.
+		/* We should save all preferences for all calendar modules in the system.
 		 */
 
 	for ( int index = 0; index < NUMBER_OF_CALENDAR_MODULES; ++index )
@@ -226,9 +179,9 @@ status_t		pref_SaveCalendarModulePreferences( BMessage* message,
 		sb << toFetch;
 		
 		if ( toAdd &&
-		     ( !prefOrig || prefOrig != prefModif ) )
+		     ( !prefOrig || *prefOrig != *prefModif ) )
 		{
-			if ( B_OK == message->HasMessage( sb.String() ) )
+			if ( true == message->HasMessage( sb.String() ) )
 			{
 				status = message->ReplaceMessage( sb.String(), toAdd );
 			}
@@ -237,8 +190,35 @@ status_t		pref_SaveCalendarModulePreferences( BMessage* message,
 				status = message->AddMessage( sb.String(), toAdd );
 			}
 			
-			if ( status != B_OK ) {
-				return status;
+			switch( status )
+			{
+				case B_ERROR:
+					utl_Deb = new DebuggerPrintout( "Data is too massive (B_ERROR)." );
+					break;
+					
+				case B_BAD_TYPE:
+					utl_Deb = new DebuggerPrintout( "Wrong type of data (B_BAD_TYPE)." );
+					break;
+					
+				case B_NO_MEMORY:
+					utl_Deb = new DebuggerPrintout( "Not enough memory (B_NO_MEMORY)." );
+					break;
+					
+				case B_BAD_VALUE:
+					utl_Deb = new DebuggerPrintout( "Proposed name is too long (B_BAD_VALUE)." );
+					break;
+					
+				case B_NAME_NOT_FOUND:					
+					utl_Deb = new DebuggerPrintout( "Trying to replace something nonexistent (B_NAME_NOT_FOUND)." );
+					break;
+
+				case B_BAD_INDEX:
+					utl_Deb = new DebuggerPrintout( "Index out of range (B_BAD_INDEX)." );
+					break;
+				
+				default:		// Intentional fall-through
+				case B_OK:
+					continue;	
 			}		
 		}	// <-- end of "if ( we should actually save the preferences )"		
 	}	// <-- end of "for (all calendar modules )"
@@ -411,23 +391,27 @@ CalendarModulePreferences::CalendarModulePreferences( const BString& id, BMessag
 {
 	uint32	tempUint32;
 	this->status = B_OK;
-	BString identifier;
+	BString identifier;	
 	
 	// Get the ID of the CalendarModule
 	if ( B_OK != archive->FindString( "Identifier", &identifier ) ||
 	     identifier != id )
 	{
 		// We can't continue without the ID.
+		utl_Deb = new DebuggerPrintout( "Can't continue without the ID." );
 		status = B_ERROR;
 		return;
-	}
+	}		
 	
 	correspondingModule = utl_FindCalendarModule( id );
 	if ( !correspondingModule )
 	{	// Can't continue without the module either
+		utl_Deb = new DebuggerPrintout( "Can't continue without the module." );
 		status = B_ERROR;
 		return;
 	}
+	
+	this->id = id;	// Identifier
 	
 	/* For all of the rest of the preferences, we may use default values
 	 *	if the values from the message aren't read good.
@@ -643,6 +627,16 @@ rgb_color CalendarModulePreferences::GetColor( bool weekends, bool viewer ) cons
  */
 void		CalendarModulePreferences::SetColor( rgb_color color, bool weekends, bool viewer )
 {
+	BString sb( "Color received: " );
+	sb << "Red = " << color.red << ", ";
+	sb << "Green = " << color.green << ", ";
+	sb << "Blue = " << color.blue << ". ";
+	
+	( weekends ) ? sb << "For weekends " : sb << "For weekdays ";
+	( viewer ) ? sb << "in viewer. " : sb << "in controls.";
+	
+	utl_Deb = new DebuggerPrintout( sb.String() );
+	
 	if ( weekends ) {
 		if ( viewer ) { weekendsColorForViewer = color; } else { weekendsColorForMenu = color; }
 	} else {
@@ -685,9 +679,9 @@ status_t	CalendarModulePreferences::Archive( BMessage* in, bool deep )
 	if ( toReturn != B_OK ) { return toReturn; }
 	toReturn = in->AddInt32( "WeekdaysColorForMenu", RepresentColorAsUint32( weekdaysColorForMenu ) );
 	if ( toReturn != B_OK ) { return toReturn; }
-	toReturn = in->AddInt32( "WeekendsColorForViewer", RepresentColorAsUint32( weekendsColorForMenu ) );
+	toReturn = in->AddInt32( "WeekendsColorForViewer", RepresentColorAsUint32( weekendsColorForViewer ) );
 	if ( toReturn != B_OK ) { return toReturn; }
-	toReturn = in->AddInt32( "WeekdaysColorForViewer", RepresentColorAsUint32( weekdaysColorForMenu ) );
+	toReturn = in->AddInt32( "WeekdaysColorForViewer", RepresentColorAsUint32( weekdaysColorForViewer ) );
 	if ( toReturn != B_OK ) { return toReturn; }
 	
 	return B_OK;

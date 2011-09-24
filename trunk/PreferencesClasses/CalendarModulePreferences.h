@@ -27,6 +27,12 @@ const uint32	kPref_CalendarModulePreferences		= 'CMPF';
 
 
 /*------------------------------------------------------------------
+ *			Global variables
+ *-----------------------------------------------------------------*/
+
+extern	CalendarModulePreferences*	pref_CalendarModulePrefs_modified[ NUMBER_OF_CALENDAR_MODULES ];
+
+/*------------------------------------------------------------------
  *			Global functions
  *-----------------------------------------------------------------*/
 
@@ -37,8 +43,7 @@ void			pref_PopulateCalendarModulePreferences( BMessage* in = NULL );
 CalendarModulePreferences*		pref_GetPreferencesForCalendarModule( const BString& id );
 
 	/* Save all modified calendar module preferences into a message. */
-status_t		pref_SaveCalendarModulePreferences( BMessage* message,
-																const BString& id = BString("") );
+status_t		pref_SaveCalendarModulePreferences( BMessage* message );
 
 	/* Delete all preferences and free memory. */
 void			pref_DeleteCalendarModulePreferences( void );
@@ -130,7 +135,6 @@ public:
 };	// <-- end of class CalendarModulePreferences
 
 
-extern	CalendarModulePreferences*	pref_CalendarModulePrefs_original[ NUMBER_OF_CALENDAR_MODULES ];
-extern	CalendarModulePreferences*	pref_CalendarModulePrefs_modified[ NUMBER_OF_CALENDAR_MODULES ];
+
 
 #endif // _CALENDAR_MODULE_PREFERENCES_H_

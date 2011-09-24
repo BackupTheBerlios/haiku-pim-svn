@@ -148,19 +148,41 @@ EmailPreferencesView::EmailPreferencesView( BRect frame )
  */
 EmailPreferencesView::~EmailPreferencesView()
 {
+	EmailPreferences* prefs = pref_GetEmailPreferences();
+	if ( !prefs ) {
+		utl_Deb = new DebuggerPrintout( "There's no modified Email preferences!" );
+	}
+	
+	BString sb;
+	
 	if ( senderEmail ) {
+		sb.SetTo( senderEmail->Text() );
+		if ( prefs && B_OK != prefs->UpdateReplyToAddress( sb ) )
+		{
+			utl_Deb = new DebuggerPrintout( "Didn't succeed to update reply-to address!" );	
+		}
 		senderEmail->RemoveSelf();
 		delete( senderEmail );
 		senderEmail = NULL;
 	}
 	
 	if ( mailServerAddress ) {
+		sb.SetTo( mailServerAddress->Text() );
+		if ( prefs && B_OK != prefs->UpdateMailServerAddress( sb ) )
+		{
+			utl_Deb = new DebuggerPrintout( "Didn't succeed to update mail server address!" );
+		}
 		mailServerAddress->RemoveSelf();
 		delete( mailServerAddress );
 		mailServerAddress = NULL;
 	}
 	
 	if ( mailServerPort ) {
+		sb.SetTo( mailServerPort->Text() );
+		if ( prefs && B_OK != prefs->UpdateMailServerPort( sb ) )
+		{
+			utl_Deb = new DebuggerPrintout( "Didn't succeed to update mail server port!" );
+		}
 		mailServerPort->RemoveSelf();
 		delete( mailServerPort );
 		mailServerPort = NULL;

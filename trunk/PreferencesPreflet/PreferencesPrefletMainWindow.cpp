@@ -33,6 +33,7 @@
 #include "CalendarModulePreferences.h"
 #include "EmailPreferences.h"
 #include "Utilities.h"
+#include "Preferences.h"
 
 /*!	
  *	\brief		Constructor for the window
@@ -57,15 +58,17 @@ PreferencesPrefletMainWindow::PreferencesPrefletMainWindow()
 	BPath path;
 	BDirectory eventualSettingsDir;
 	BFile eventualSettingsFile;
-	DebuggerPrintout *deb = NULL;
 	
 	GregorianCalendar* gregorianCalMod = new GregorianCalendar();
 	global_ListOfCalendarModules.AddItem( gregorianCalMod );
 	
-	pref_PopulateCalendarModulePreferences( NULL );
+	status = pref_PopulateAllPreferences();
+	if ( status != B_OK )
+	{
+		utl_Deb = new DebuggerPrintout( "Did not succeed to read the preferences!" );
+	}
 	
-	pref_PopulateEmailPreferences( NULL );
-	
+
 //	// Access the overall settings directory
 //	status = find_directory( B_USER_SETTINGS_DIRECTORY,
 //							 &path,
@@ -282,12 +285,19 @@ PreferencesPrefletMainWindow::PreferencesPrefletMainWindow()
  */
 PreferencesPrefletMainWindow::~PreferencesPrefletMainWindow()
 {
+	status_t status = B_OK;
 	
 	if ( emailPrefView )
 	{
 		emailPrefView->RemoveSelf();
 		delete emailPrefView;
 		emailPrefView = NULL;	
+	}
+	
+	status = pref_SaveAllPreferences();
+	if ( B_OK != status )
+	{
+		utl_Deb = new DebuggerPrintout( "Did not succeed to write the preferences!" );	
 	}
 }
 

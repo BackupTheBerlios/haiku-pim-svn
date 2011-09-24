@@ -94,25 +94,17 @@ status_t		pref_SaveEmailPreferences( BMessage* out )
 	 * if the message didn't have information on the preferences
 	 *		add the created message to the output
 	 */
-	if ( !pref_EmailPreferences_original ||
-		  *pref_EmailPreferences_original != *pref_EmailPreferences_modified ||
-		  ! out->HasMessage( "Email Preferences" ) )
+	if ( out->HasMessage( "Email Preferences" ) &&
+	     ( ( !pref_EmailPreferences_original ) || 
+	       ( *pref_EmailPreferences_original != *pref_EmailPreferences_modified ) ) )
 	{
-		if ( out->HasMessage( "Email Preferences" ) )
-		{
-			status = out->ReplaceMessage( "Email Preferences", toAdd );
-		}
-		else
-		{
-			status = out->AddMessage( "Email Preferences", toAdd );
-		}
-		return status;		// Error or B_OK - it doesn't matter here.
+		status = out->ReplaceMessage( "Email Preferences", toAdd );
 	}
-	else		/* No changes from the information saved in the message */
+	else
 	{
-		delete toAdd;
-		return B_OK;		
+		status = out->AddMessage( "Email Preferences", toAdd );
 	}
+	return status;		// Error or B_OK - it doesn't matter here.
 	
 }	// <-- end of function pref_SaveEmailPreferences
  
