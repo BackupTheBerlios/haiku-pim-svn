@@ -15,7 +15,7 @@
 #define _PREFERENCES_PREFLET_APP_H_
 	
 
-#define ApplicationSignature "application/x-vnd.hitech-EventualPreferencesPreflet"
+#define ApplicationSignature "application/x-vnd.Hitech.Eventual.Preferences"
 
 #include <Application.h>
 

@@ -22,6 +22,16 @@
 #include <View.h>
 #include <Window.h>
 
+/*--------------------------------------------------------------------------
+ * 			Strings used for packing messages to outside world.
+ *-------------------------------------------------------------------------*/
+
+const BString		kHoursValueKey( "Hours" );
+const BString		kMinutesValueKey( "Minutes" );
+const BString		kCheckBoxExistsKey( "CheckBox exists" );
+const BString		kCheckBoxValueKey( "CheckBox value" );
+
+
 /*==========================================================================
 **			IMPLEMENTATION OF CLASS GeneralHourMinControl
 **========================================================================*/
@@ -129,11 +139,12 @@ void GeneralHourMinControl::InitUI( void )
 	if ( this->fCheckBox )
 	{
 		this->fCheckBox->ResizeToPreferred();
+		size.SetWidth( fCheckBox->Bounds().Width() );
+		size.SetHeight( fCheckBox->Bounds().Height() );
 		layoutItem = layout->AddView( 2, fCheckBox );
 		if ( layoutItem ) {
-			size.SetWidth( fCheckBox->Bounds().Width() );
-			size.SetHeight( fCheckBox->Bounds().Height() );
 			layoutItem->SetExplicitPreferredSize( size );
+			layoutItem->SetExplicitMaxSize( size );
 			layoutItem->SetExplicitAlignment(BAlignment( B_ALIGN_RIGHT, B_ALIGN_TOP ) );
 		}
 	}
@@ -468,12 +479,50 @@ BMenuBar*	GeneralHourMinControl::CreateMenuBar( void )
 
 
 
+/*!	\brief		Sends a message to the default target.
+ *		\details		The passed argument is the message to be sent. It's up to caller to 
+ *						delete this message when this function returns.
+ *		\param[in]	in		Pointer to the message to be sent.
+ */
+void	GeneralHourMinControl::SendInvocationMessage( BMessage* in )
+{
+	if ( ! in  ) { return; }
+	
+	bool checkBoxExists = ( bDoesCheckBoxExist && 
+									( fCheckBox != NULL ) && 
+									fCheckBox->IsEnabled() );
+									
+	in->AddPointer( "source", this );
+	in->AddInt64( "when", system_time() );
+	in->AddInt32( kHoursValueKey.String(), this->fRepresentedTime.tm_hour );
+	in->AddInt32( kMinutesValueKey.String(), this->fRepresentedTime.tm_min );
+	in->AddBool( kCheckBoxExistsKey.String(), checkBoxExists );
+	if ( checkBoxExists ) {
+		in->AddBool( kCheckBoxValueKey.String(), ( fCheckBox->Value() != 0 ) );
+	}
+	
+	this->Invoke( in );	
+	
+}	// <-- end of function GeneralHourMinControl::SendInvocationMessage
+
+
+
 /*!	\brief		Main function of the control.
  */
 void GeneralHourMinControl::MessageReceived( BMessage* in ) {
 
 	uint8 tempUint8 = 0;
 	uint32 tempUint32 = 0;
+	BMessage* toSend = NULL;
+	
+	
+	if ( this->Message() ) {
+		toSend = new BMessage( *this->Message() );	// Got copy
+	} else {
+		toSend = new BMessage( kGeneralHourMinControlUpdated );	// Created new message
+	}
+	
+	// Note: here toSend may be NULL! Its value is checked in the "SendInvocationMessage".
 	
 	switch( in->what )
 	{
@@ -483,18 +532,25 @@ void GeneralHourMinControl::MessageReceived( BMessage* in ) {
 				return;	
 			}
 			this->fRepresentedTime.tm_hour = tempUint32;
+			
+			SendInvocationMessage( toSend );
 
 			break;
 		
 		case kMinutesUpdated:
-			if ( B_OK != in->FindInt8("Minutes", ( int8* )&tempUint8 ) ) {
+			if ( B_OK != in->FindInt8("SelectedMinutes", ( int8* )&tempUint8 ) ) {
 				/* error */
 				return;
 			}
 			this->fRepresentedTime.tm_min = tempUint8;
+			
+			SendInvocationMessage( toSend );
+			
 			break;
 			
 		case kCheckBoxToggled:
+		
+			SendInvocationMessage( toSend );
 			
 			break;
 		
@@ -819,6 +875,7 @@ void		GeneralHourMinControl::SetCheckBoxLabel( const BString& toSet )
 				size.SetWidth( fCheckBox->Bounds().Width() );
 				size.SetHeight( fCheckBox->Bounds().Height() );
 				layoutItem->SetExplicitPreferredSize( size );
+				layoutItem->SetExplicitMaxSize( size );
 				layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_RIGHT, B_ALIGN_TOP ) );
 			}
 			this->InvalidateLayout();

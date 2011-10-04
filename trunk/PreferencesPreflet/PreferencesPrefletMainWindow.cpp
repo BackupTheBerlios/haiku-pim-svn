@@ -32,8 +32,10 @@
 #include "PreferencesPrefletMainWindow.h"
 #include "CalendarModulePreferences.h"
 #include "EmailPreferences.h"
+#include "TimePreferences.h"
 #include "Utilities.h"
 #include "Preferences.h"
+#include "AboutView.h"
 
 /*!	
  *	\brief		Constructor for the window
@@ -229,8 +231,8 @@ PreferencesPrefletMainWindow::PreferencesPrefletMainWindow()
 	
 	/* Constructing the first tab */
 	r.InsetBySelf( 5, 5 );
-	r.bottom -= mainView->TabHeight();
-	r.right -= 10;
+	r.bottom -= ( mainView->TabHeight() + 10 );
+	r.right -= 13;
 	BTab* tab = new BTab();
 	
 	catPrefView = new CategoryPreferencesView( r );
@@ -265,7 +267,26 @@ PreferencesPrefletMainWindow::PreferencesPrefletMainWindow()
 	}
 	tab = new BTab();
 	mainView->AddTab( calModPrefView, tab );
-	tab->SetLabel( "Calendar Modules\' preferenences" );
+	tab->SetLabel( "Calendars" );
+	
+	timePrefView = new TimePreferencesView( r );
+	if ( !timePrefView ) {
+		/* Panic! */
+		exit( 1 );
+	}
+	tab = new BTab();
+	mainView->AddTab( timePrefView, tab );
+	tab->SetLabel( "Times" );
+	
+	// Constructing the fourth tab
+	aboutView = new AboutView( r );
+	if ( !aboutView ) {
+		/* Panic! */
+		exit( 1 );
+	}
+	tab = new BTab();
+	mainView->AddTab( aboutView, tab );
+	tab->SetLabel( "About" );
 	
 	
 	mainView->Select( 0 );	// Selecting the first tab	

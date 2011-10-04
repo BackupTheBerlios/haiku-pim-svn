@@ -128,8 +128,6 @@ void MonthMenu::MouseDown(BPoint where) {
 	
 	if ( (item) && (dayItem = dynamic_cast<DayItem*>(item))) {
 		if (dayItem->IsServiceItem()) {
-			BAlert* al = new BAlert("A", "Inside!", "Ok");
-//			if (al) al->Go();
 			bool en = dayItem->IsEnabled();
 			dayItem->SetEnabled(false);
 //			BMenu::MouseDown(where);			
@@ -344,7 +342,7 @@ void CalendarControl::AttachedToWindow() {
 			if ( (men = dateSelector->SubmenuAt(i) ) != NULL ) {
 				men->SetTargetForItems(this);	
 			} else {
-				if (item = dateSelector->ItemAt(i)) {
+				if ( ( item = dateSelector->ItemAt(i) ) != NULL ) {
 					item->SetTarget(this);	
 				}	
 			}
@@ -931,9 +929,6 @@ void CalendarControl::MessageReceived(BMessage* in) {
 
 	BString sb;
 	
-	DebuggerPrintout *al;
-	al = new DebuggerPrintout("Check");
-	
 	map<int, DoubleNames> monthNames = calModule->GetMonthNamesForLocalYear(
 			this->representedTime.tm_year);
 	map<int, BString> dayNames;
@@ -1009,8 +1004,6 @@ void CalendarControl::MessageReceived(BMessage* in) {
 		case (kYearIncreased):
 		case (kYearDecreased):
 		case (kYearChanged):
-			al = new DebuggerPrintout("Year has changed");
-			
 			prevYear = this->representedTime.tm_year;
 			if (command == kYearIncreased) {				
 				++(this->representedTime).tm_year;
@@ -1080,7 +1073,7 @@ void CalendarControl::MessageReceived(BMessage* in) {
 			return;
 			break;
 		case (kOpenDateSelector):	
-			if (al) al->Go();
+			
 		default:
 			BView::MessageReceived(in);
 	}

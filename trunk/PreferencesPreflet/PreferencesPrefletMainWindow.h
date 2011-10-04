@@ -24,6 +24,10 @@
 
 
 #include "CategoryPreferencesView.h"
+#include "EmailPreferencesView.h"
+#include "TimePreferencesView.h"
+#include "CalendarModulePreferencesView.h"
+#include "AboutView.h"
 
 /*!	\class	PreferencesPrefletMainWindow
  *	\brief	Main window of the preflet.
@@ -43,7 +47,11 @@ private:
 	BButton* revertButton;
 	BTabView* mainView;
 	
-	CategoryPreferencesView* catPrefView;
+	CategoryPreferencesView* 	catPrefView;
+	EmailPreferencesView*		emailPrefView;
+	CalendarModulePreferencesView*	calModPrefView;
+	TimePreferencesView*		timePrefView;
+	AboutView*					aboutView;
 };
 
 #endif	// _PREFERENCES_PREFLET_MAIN_WINDOW_H_

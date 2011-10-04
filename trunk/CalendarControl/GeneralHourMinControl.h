@@ -25,10 +25,18 @@
  *						Message constants
  *-----------------------------------------------------------------------*/
 
+	// Getting data on internal components
 const uint32		kHoursUpdated						= 'HoUP';
 const	uint32		kMinutesUpdated					= 'MiUP';
 const uint32		kCheckBoxToggled					= 'CbUP';
 
+	// Default message variable sent to outside world
+const uint32		kGeneralHourMinControlUpdated	= 'GHMC';
+
+extern const BString		kHoursValueKey;
+extern const BString		kMinutesValueKey;
+extern const BString		kCheckBoxExistsKey;
+extern const BString		kCheckBoxValueKey;
 
 
 /*------------------------------------------------------------------------
@@ -149,6 +157,7 @@ class GeneralHourMinControl
 		virtual BCheckBox*	CreateCheckBox( void );
 		virtual void			BuildMatrixMenu( BMenu* toEdit );
 		virtual void			UpdateSelectedValuesInMenus( void );
+		virtual void			SendInvocationMessage( BMessage* in );
 		
 
 };	// <-- end of class GeneralHourMinControl

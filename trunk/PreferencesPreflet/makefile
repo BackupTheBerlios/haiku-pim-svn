@@ -26,12 +26,18 @@ TYPE= APP
 #	in folder names do not work well with this makefile.
 SRCS= 	PreferencesPrefletApp.cpp \
 		PreferencesPrefletMainWindow.cpp \
-		CategoryPreferencesView.cpp
+		CategoryPreferencesView.cpp	\
+		EmailPreferencesView.cpp	\
+		CalendarModulePreferencesView.cpp	\
+		TimePreferencesView.cpp		\
+		AboutView.cpp	\
+		URLView.cpp
 		
 		
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
-RSRCS= 
+RSRCS= Resources.rsrc	\
+		UniversityLogo.rsrc
 
 #	specify additional libraries to link against
 #	there are two acceptable forms of library specifications
@@ -45,11 +51,14 @@ RSRCS=
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
 LIBS= 	be		\
 	   	stdc++	\
+	   	translation	\
 	   	Utilities	\
 	   	CalendarModule	\
+	   	CalendarControl	\
 	   	TimeRepresentation	\
 	   	CategoryItem	\
-	   	Utilities
+	   	Utilities		\
+	   	PreferencesClasses
 		
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
@@ -68,9 +77,11 @@ SYSTEM_INCLUDE_PATHS =
 #	thes use the form: #include "header"
 #	source file directories are automatically included
 LOCAL_INCLUDE_PATHS = ../CalendarModule		\
+	../CalendarControl.new	\
 	../Utilities	\
 	../TimeRepresentation	\
-	../CategoryItem
+	../CategoryItem			\
+	../PreferencesClasses
 
 #	specify the level of optimization that you desire
 #	NONE, SOME, FULL

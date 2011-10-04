@@ -30,33 +30,6 @@ const uint32	kCalendarModuleChosen = 'CALM';
 const uint32	kCalendarModuleWeekendDaySelected = 'WKDS';
 const uint32	kCalendarModuleFirstDayOfWeekSelected = 'FDOW';
 
-
-
-
-
-
-/*---------------------------------------------------------
- * 		Preferences of HourMinControl
- *-------------------------------------------------------*
-
-class HourMinControlPreferences
-	:
-	public BArchivable
-{
-protected:
-	bool bIsTime24Hours;
-	
-public:
-	HourMinControlPreferences();
-	HourMinControlPreferences( BMessage* archive );
-	static BArchivable* Instantiate ( BMessage* archive );
-	
-	virtual bool operator==( const HourMinControlPreferences& other ) const;
-	virtual HourMinControlPreferences operator= ( const HourMinControlPreferences& other);
-	
-};	// <-- end of class HourMinControlPreferences */
-
-
 /*----------------------------------------------------------------------------
  *		Calendar module preferences view
  *--------------------------------------------------------------------------*/
