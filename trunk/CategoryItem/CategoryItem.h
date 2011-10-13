@@ -72,8 +72,7 @@ struct Category {
 
 extern BList global_ListOfCategories;	//!< List that holds all categories in the system.
 
-void	PopulateListOfCategories( BMessage* in = NULL );
-void	AddCategoryToGlobalList( const Category &toAdd );
+void	AddCategoryToGlobalList( const Category *toAdd );
 bool	MergeCategories( BString& source, BString& target );
 
 /*!	\brief		Just a shortcut for another function.
@@ -82,8 +81,15 @@ bool	MergeCategories( BString& source, BString& target );
  */
 inline void	AddCategoryToGlobalList( const BString &name, rgb_color color )
 {
-	Category toAdd( name, color );
+	Category* toAdd = new Category( name, color );
 	AddCategoryToGlobalList( toAdd );
+}
+
+/*!	\brief		Just a shortcut for another function.
+ */
+inline void AddCategoryToGlobalList( const Category &toAdd )
+{
+	AddCategoryToGlobalList( &toAdd );
 }
 
 /*!	\brief		Just a shortcut for another function.
@@ -96,6 +102,8 @@ inline void AddCategoryToGlobalList( const BString &name )
 	AddCategoryToGlobalList( toAdd );	
 }
 
+
+void		DeleteCategoryFromGlobalList( const BString& toDelete );
 
 
 /*!	\brief		Compares two categories using BString's operator<.
@@ -299,6 +307,7 @@ class	CategoryMenu
 	public:
 		CategoryMenu( const char* name,
 					  bool withSeparator = false,
+					  BMessage* templateMessage = NULL,
 					  BMessage* preferences = NULL );
 		virtual ~CategoryMenu();
 	
@@ -315,12 +324,19 @@ class	CategoryMenu
 	
 	protected:
 	
-		/*!	\details	If this variable is "true", the menu upon creation or refresh
+		/*!	\details		If this variable is "true", the menu upon creation or refresh
 		 *				will contain a separator item which will be selected by default.
 		 *				If this variable is "false", the "Default" category will be
 		 *				selected, or the first one, if there's no "Default" category.
 		 */
 		bool bWithSeparator;
+		
+		/*!	\details		This message is the template message to be sent by every
+		 *						invoked item. If item does not have a message, a copy of
+		 *						template message is assigned to it. Additional data assigned
+		 *						to message of every item in the menu is its Category Name.
+		 */
+		BMessage* fTemplateMessage;
 };
 
 

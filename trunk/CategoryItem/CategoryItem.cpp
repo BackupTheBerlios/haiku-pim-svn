@@ -2,15 +2,19 @@
  * Copyright 2010 Alexey Burshtein	<aburst02@campus.haifa.ac.il>
  * All rights reserved. Distributed under the terms of the MIT license.
  */
+ 
+// POSIX includes
 #include <limits.h>		/* For the USHRT_MAX limit  */
 #include <math.h>		/* For the "ceilf" function */
 #include <stdio.h>
 #include <stdlib.h>
 
+// OS includes
 #include <Application.h>
 #include <Directory.h>
 #include <Entry.h>
 #include <FindDirectory.h>
+#include <fs_attr.h>
 #include <Font.h>
 #include <GroupLayout.h>
 #include <GridLayout.h>
@@ -27,7 +31,7 @@
 #include <Volume.h>
 #include <VolumeRoster.h>
 
-
+// Project includes
 #include "CategoryItem.h"
 #include "Utilities.h"
 
@@ -43,245 +47,21 @@ class clsMainWindow;
  * 		Implementation of global functions
  *=====================================================================*/
 
-/*!
- *	\brief			Fill up the list of categories in the system.
- *	\details		The function performs several tasks:
- *					1)	If the input message is <b>not</b> NULL, the function parses
- *						the message and compares current list of categories with the
- *						data found in the message. 
- *						If there are inconsistencies (which can be only in color),
- *						the data from message wins.
- *					2)	In any case, the function performs a filesystem query and adds
- *						to the list any categories it finds from the disk data.
- *						The colors assigned to these categories is random.
- *					3) 	It sorts the categories alphabetically
- *					4)	If the list is still empty, it defines a "Default" category.
- *	\note			Return value
- *					This function does not return anything. It modifies in-place
- *					the global list ::global_ListOfCategories .
- */
-void	PopulateListOfCategories( BMessage* in )
-{
-	BString sbCategory,		//!< That will be identifier of category name
-			sbColor;		//!< That will be identifier of the corresponding color
-	
-	BString catName;		//!< This is the name of the category read from message or from hard disk.
-	rgb_color catColor;		//!< This is the color of the category read from message or created randomly.
-	
-	BQuery* categoryQuery = NULL;	//!< The way to fill the previously-uncatched categories.
-	Category*	pCategory = NULL;	//!< Used to traverse the list of categories
-	
-	status_t	status;				//!< Result of the last action.
-	ssize_t		bytesTransferred;	//!< Used in I/O operations
-	
-	DebuggerPrintout* deb = NULL;
-	entry_ref	fileToGetTheAttributesFrom;	//!< This is the reference to file with unknown category.
-	BNode*		node = NULL;	//!< This note will be initialized with fileToGetTheAttributesFrom.
-	char		buffer[ 255 ];	//!< I'll use this buffer to read Categories from files
-	
-	/*!	\note		Part 1.
-	 *				If the message was submitted, check it for existence of
-	 *				categories, verify these categories exist in the global
-	 *				list of categories, and if their colors differ, update
-	 *				the color of the category in list.
-	 *				<b>Data from the message always wins!</b>
-	 *				If the message contains data about Category which doesn't
-	 * 				exist in the list of categories, add it to the list.
-	 */
-	if ( in ) 
-	{
-		uint32 index = 0;
-		while ( index < USHRT_MAX )	// Almost infinite loop
-		{
-			sbCategory.Truncate( 0 );	// Clear the previous string.
-			sbCategory << "Category" << index;
-			
-			sbColor.Truncate( 0 );		// Clear the previous string.
-			sbColor << "Color" << index;
-			
-			// Now we have proper strings "CategoryX" and "ColorX" both
-			// sharing the same number X. Let's find out if the message
-			// contains the data on category with this ID.
-			status = in->FindString( sbCategory.String(),
-								     &catName );
-			if ( status != B_OK )
-			{
-				// Didn't find name of the category
-				break;	// Move on to part 2
-			}
-			else
-			{
-				// Name of the categ ory was found successfully. Fetch the color:
-				status = in->FindInt32( sbColor.String(),
-										( int32* )&catColor );
-				if ( status != B_OK )
-				{
-					// The name was found, but the color wasn't... Define a random color!
-					catColor = CreateRandomColor();
-				}
-			}
-			
-			++index;	// Don't forget to move to the next placeholder in the message
-			
-			// Actually add the category.
-			AddCategoryToGlobalList( catName, catColor );
-			
-		}	// <-- end of "while (there are categories in the message)"
-		
-	}	// <-- end of parsing the message.
-	
-	
-	/*! \note	Part 2. 
-	 *			Perform a system query on all events with category name that doesn't
-	 *			match to existing ones, assign them random colors and add them to the
-	 *			global list of categories.
-	 *
-	 *	\par
-	 *			We're interested in:
-	 *			1)  static list of the entries; (if the user drops a file with unknown
-	 *				category while Preferences preflet is running - it's his problem);
-	 *			2)  only the unknown categories - i. e. not the ones already in BList.
-	 *			For that we construct a static BQuery, guide it to a specific volume
-	 *			and fetch the results. The formula is "any file which has an unknown
-	 *			category".
-	 */
-//	categoryQuery = new BQuery();
-//	if ( !categoryQuery )
-//	{
-//		/* Panic! */
-//		exit( 1 );
-//	}
-//	
-//		// Global list is static, it can't be NULL. However, pCategory can.
-//	pCategory = ( Category* )global_ListOfCategories.FirstItem();
-//	
-//		// For initialization of the BQuery, we need to find the Volume with user's data.
-//	BVolumeRoster volumeRoster;
-//	BVolume bootVolume;
-//	volumeRoster.GetBootVolume( &bootVolume );
-//	
-//		// Setting the query to look in the boot volume
-//	categoryQuery->SetVolume( &bootVolume );
-//	
-//		// Let's set the predicate!
-//	int index = 0;		// Index of the current item. We're starting with 0.
-//	while ( pCategory != NULL )
-//	{
-//		categoryQuery->PushAttr("Category");
-//		categoryQuery->PushString( (pCategory->categoryName).String() );
-//		categoryQuery->PushOp( B_NE );
-//		
-//		if ( index > 0 )
-//		{
-//			categoryQuery->PushOp( B_AND );
-//		}
-//		
-//			// Advancing to the next item	
-//		index++;
-//		pCategory = ( Category* )global_ListOfCategories.ItemAt( index );
-//		
-//	}	// <-- end of traversing on all Category items in the list
-//	
-//		// The predicate is constructed. We fire it only if it's not empty.
-//	if ( categoryQuery->PredicateLength() > 0 )
-//	{
-//			// Run the predicate.
-//		status = categoryQuery->Fetch();
-//		if ( status == B_NO_INIT )
-//		{
-//			deb = new DebuggerPrintout( "Volume or predicate is not set." );		
-//		}
-//		else if ( status == B_BAD_VALUE )
-//		{
-//			deb = new DebuggerPrintout( "The predicate was set incorrectly." );
-//		}
-//		else if ( status == B_NOT_ALLOWED )
-//		{
-//			deb = new DebuggerPrintout( "Really shouldn't receive this status here!" );
-//		}
-//		else	// status is B_OK, let's fetch the results.
-//		{
-//			while ( ( status = categoryQuery->GetNextRef( &fileToGetTheAttributesFrom ) ) == B_OK )
-//			{
-//				node = new BNode( &fileToGetTheAttributesFrom );
-//				if ( !node || ( node->InitCheck() != B_OK ) )
-//				{	// Something went bad in initialization, continue to next entry.
-//					continue;
-//				}
-//				
-//				// The node was initialized successfully. Let's get the category!
-//				if ( ( bytesTransferred = node->ReadAttr( "Category",
-//														  B_STRING_TYPE,
-//														  0,
-//														  buffer,
-//														  255 ) ) != 0 )
-//				{
-//					catName.Truncate( bytesTransferred );
-//					catName.SetTo( buffer );	// Got the category's name
-//
-//						// Add the category to the global list
-//					AddCategoryToGlobalList( catName );
-//					
-//				}	// Succeeded to read the category!
-//				
-//				delete node;	// Free the BNode object!
-//				
-//			}	// <-- end of "while ( succeeded to get the entry_ref )"
-//			
-//			if ( status == B_ENTRY_NOT_FOUND )
-//			{
-//				// Arrived to the end of the list
-//			}
-//			else if ( status == B_BAD_VALUE )
-//			{
-//				deb = new DebuggerPrintout( "The predicate includes unindexed attributes." );
-//			}
-//			else if ( status == B_FILE_ERROR )
-//			{
-//				deb = new DebuggerPrintout( "The BQuery hasn't fetched." );	
-//			}
-//		
-//		}	// <-- end of "if ( succeeded to send the query )"
-//		
-//	}	// <-- end of "if ( the predicate length was not zero )"
-	
-	/*!	\note		Part 3.
-	 *				Assuming the previous two parts were successful, we now have
-	 *				a list of pointers to Category items. Let's sort them alphabetically
-	 *				for the sake of beauty.
-	 */
-	if ( !global_ListOfCategories.IsEmpty() )
-		global_ListOfCategories.SortItems( CategoriesCompareFunction );
-	
-	/*!	\note		Part 4.
-	 *				If the list is still empty, we should add the "Default" category.
-	 *				The list should not be re-sorted, since it's the only category :)
-	 */
-	if ( global_ListOfCategories.IsEmpty() )
-	{
-		catColor = ui_color( B_WINDOW_TAB_COLOR );
-		catName.SetTo( "Default" );
-		AddCategoryToGlobalList( catName, catColor );
-	}
-	
-}	// <-- end of function "PopulateListOfCategories"
-
-
 
 /*!	\brief		Add a new category to the global list of categories.
  *	\details	If a category with such name already exists, update its color.
- *	\param[in]	Category	The category to be added
+ *	\param[in]	toAdd		The category to be added
  *	\note		Note on memory consumption:
  *				The category that's added is a copy, not an original. The original may
  *				be safely deleted.
  */
-void	AddCategoryToGlobalList( const Category &toAdd )
+void	AddCategoryToGlobalList( const Category *toAdd )
 {
 	int32 index, limit = global_ListOfCategories.CountItems();
 	bool categoryWithSameNameWasFound = false;
-	
 	Category* underTesting = NULL;
 	
+	if ( ! toAdd ) { return; }
 	
 	// Passing on all items currently in the list
 	for ( index = 0; index < limit; ++index )
@@ -289,13 +69,13 @@ void	AddCategoryToGlobalList( const Category &toAdd )
 		underTesting = ( Category* )global_ListOfCategories.ItemAt( index );
 		
 		// If found the name, check the color
-		if ( underTesting && ( toAdd == *underTesting ) )
+		if ( underTesting && ( toAdd->operator== ( *underTesting ) ) )
 		{
 			// If the colors don't match,	
-			if ( underTesting->categoryColor != toAdd.categoryColor )
+			if ( underTesting->categoryColor != toAdd->categoryColor )
 			{
 				// Need to update the color.
-				underTesting->categoryColor = toAdd.categoryColor;
+				underTesting->categoryColor = toAdd->categoryColor;
 			}
 			
 			// In any case, exitting.
@@ -325,11 +105,14 @@ void	AddCategoryToGlobalList( const Category &toAdd )
 bool	MergeCategories( BString& source, BString& target )
 {
 	BQuery*	categoryQuery = NULL;
-	BFile*	eventFile = NULL;
+	BFile*	file = NULL;
+	entry_ref	fileToReadAttributesFrom;
+	attr_info	attribute_info;	//!< Information about the attribute.
 	BAlert*	alert = NULL;
-	BString sb;
+	BString 	sb;
 	int		tempInt;
-	bool 	toReturn = false;
+	bool 		toReturn = false;
+	status_t	status;
 	
 	/* Ask the user if he really wants to perform the merge */
 	sb << "You are going to move all items currently related to category ";
@@ -366,19 +149,103 @@ bool	MergeCategories( BString& source, BString& target )
 		// Setting the query to look in the boot volume
 	categoryQuery->SetVolume( &bootVolume );
 	
+		// Check the category attribute type's name.
+	int i = 0;
+	BString categoryAttributeInternalName;
+	while ( AttributesArray[ i ].internalName != 0 )
+	{
+		if ( strcmp( AttributesArray[ i ].humanReadableName, "Category" ) == 0 )
+		{
+			// Found the correct attribute! Now, let's take its internal name...
+			break;
+		}
+		++i;
+	}
+	
+	if ( AttributesArray[ i ].internalName == NULL )
+	{
+		utl_Deb = new DebuggerPrintout( "Didn't succeed to find internal name for Category attribute. Play with attributes you did, yound padavan?" );
+		return false;
+	}
+	
 		// Construct the predicate
-	categoryQuery->PushAttr( "Category" );
+	categoryQuery->PushAttr( AttributesArray[ i ].internalName );
 	categoryQuery->PushString( source.String() );
 	categoryQuery->PushOp( B_EQ );
 	
+		// Another item of the predicate is the type of the file.
+	categoryQuery->PushAttr( "BEOS:TYPE" );
+	categoryQuery->PushString( kEventFileMIMEType );
+	categoryQuery->PushOp( B_EQ );
+	categoryQuery->PushOp( B_AND );
+	
+		// Fire the query!
+	categoryQuery->Fetch();
+	
+		// Fetching the results
+	while ( ( status = categoryQuery->GetNextRef( &fileToReadAttributesFrom ) ) == B_OK )
+	{
+		// Successfully retrieved next entry
+		
+		file = new BFile( &fileToReadAttributesFrom, B_READ_ONLY );
+		if ( !file || file->InitCheck() != B_OK )
+			continue;
+		
+		status = file->GetAttrInfo( AttributesArray[ i ].internalName,
+											 &attribute_info );
+		if ( status != B_OK )
+			continue;
+	
+			// Update the category attribute	
+		file->WriteAttr( AttributesArray[ i ].internalName,
+							  AttributesArray[ i ].type,	// Supposedly, B_STRING_TYPE
+							  0,
+							  target.String(),
+							 ( sizeof( target.String() ) > 255 ) ? 255 : sizeof( target.String() ) );
+		
+		/* Actually, the return value is not needed.
+		 * In any case we're continuing to a next item.
+		 */
+		 
+		 	// Clear the file descriptor.
+		delete file;
+	}
 	
 	delete categoryQuery;
+	
+		// Remove category from global list of categories.
+	DeleteCategoryFromGlobalList( source );
 	
 	return true;	
 }	// <-- end of function MergeCategories
 
 
 
+/*!	\brief		Removes category from global list of categories.
+ */
+void		DeleteCategoryFromGlobalList( const BString& toDelete )
+{
+	int i, limit = global_ListOfCategories.CountItems();
+	Category* underTesting = NULL;
+	BString sb;
+	
+	for ( i = 0; i < limit; ++i )
+	{
+		underTesting = ( Category* )global_ListOfCategories.ItemAt( i );
+		if ( underTesting == NULL )
+			continue;
+		
+		if ( toDelete == underTesting->categoryName ) {
+			sb.SetTo( "Found category to delete at position " );
+			sb << i;
+			utl_Deb = new DebuggerPrintout( sb.String() );
+			
+			global_ListOfCategories.RemoveItem( i );
+			delete underTesting;
+			break;
+		}
+	}	
+}	// <-- end of function DeleteCategoryFromGlobalList
 
 
 
@@ -2134,12 +2001,15 @@ void	CategoryMenuItem::UpdateColor( rgb_color newColor )
  */
 CategoryMenu::CategoryMenu( const char *name,
 							bool withSeparator,
+							BMessage* templateMessage,
 							BMessage* preferences )
 	:
 	BMenu( name, B_ITEMS_IN_COLUMN ),
-	bWithSeparator( withSeparator )
+	bWithSeparator( withSeparator ),
+	fTemplateMessage( templateMessage )
 {
 	RefreshMenu( preferences );	// Populate the menu.	
+	BMenuItem* defaultItem = NULL;
 	
 	if ( withSeparator )
 	{
@@ -2149,7 +2019,19 @@ CategoryMenu::CategoryMenu( const char *name,
 			/* Panic! */
 			exit( 1 );
 		}
-		BMenu::AddItem( separator );
+		
+		defaultItem = ( BMenuItem* )this->FindItem( "Default" );
+		
+		if ( NULL == defaultItem ) {
+			BMenu::AddItem( separator, 1 );
+		} else {
+			int i = 0;
+			while ( defaultItem != ( BMenuItem* )this->ItemAt( i ) ) {
+				++i;
+			}
+			BMenu::AddItem( separator, ++i );
+		}
+			
 		this->SetLabelFromMarked( false );
 		this->SetRadioMode( false );
 	}
@@ -2233,7 +2115,11 @@ void		CategoryMenu::RefreshMenu( BMessage* preferences )
 			pCat = ( Category* )global_ListOfCategories.ItemAt( index );
 			if ( pCat )
 			{
-				toSend = new BMessage( kCategorySelected );
+				if ( fTemplateMessage ) {
+					toSend = new BMessage( *fTemplateMessage );	
+				} else {
+					toSend = new BMessage( kCategorySelected );
+				}
 				if ( !toSend )
 				{
 					/* Panic! */
@@ -2401,6 +2287,19 @@ bool	CategoryMenu::AddItem( CategoryMenuItem* item )
 			// Found first item that's greater alphabetically
 		else
 		{
+			// Verify the message
+			if ( ! item->Message() )
+			{
+				BMessage* toSend = NULL;
+				if ( fTemplateMessage ) {
+					toSend = new BMessage( *fTemplateMessage );
+				} else {
+					toSend = new BMessage( kCategorySelected );
+				}
+				if ( !toSend ) { return false; }
+				toSend->AddString( "Category", item->Label() );
+				item->SetMessage( toSend );
+			}
 			return BMenu::AddItem( item, index );
 		}
 		
@@ -2408,6 +2307,18 @@ bool	CategoryMenu::AddItem( CategoryMenuItem* item )
 	}
 	
 	// If we got here, then it should be the last item.
-	BMenu::AddItem( item );
+	if ( ! item->Message() )
+	{
+		BMessage* toSend = NULL;
+		if ( fTemplateMessage ) {
+			toSend = new BMessage( *fTemplateMessage );
+		} else {
+			toSend = new BMessage( kCategorySelected );
+		}
+		if ( !toSend ) { return false; }
+		toSend->AddString( "Category", item->Label() );
+		item->SetMessage( toSend );
+	}
+	return BMenu::AddItem( item );
 	
 }	//	<-- end of function CategoryMenu::AddItem
