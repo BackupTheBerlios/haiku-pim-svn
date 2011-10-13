@@ -47,7 +47,7 @@ int main(int, char **)
  */
 PreferencesPrefletApp::PreferencesPrefletApp()
 :
-	BApplication(ApplicationSignature),
+	BApplication( kPreferencesPrefletApplicationSignature ),
 	fMainWindow(NULL)
 {
 	fMainWindow = new PreferencesPrefletMainWindow();

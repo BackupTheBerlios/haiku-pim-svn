@@ -14,9 +14,6 @@
 #ifndef _PREFERENCES_PREFLET_APP_H_
 #define _PREFERENCES_PREFLET_APP_H_
 	
-
-#define ApplicationSignature "application/x-vnd.Hitech.Eventual.Preferences"
-
 #include <Application.h>
 
 #include "PreferencesPrefletMainWindow.h"

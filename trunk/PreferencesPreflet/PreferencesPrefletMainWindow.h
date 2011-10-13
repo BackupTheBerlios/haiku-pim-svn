@@ -29,6 +29,19 @@
 #include "CalendarModulePreferencesView.h"
 #include "AboutView.h"
 
+
+/*----------------------------------------------------------------------------
+ *				Constants
+ *---------------------------------------------------------------------------*/
+ 
+const uint32		kSaveAndClose	= 'kSAC';
+const uint32		kJustSave		= 'kSav';
+
+
+/*----------------------------------------------------------------------------
+ *				Class PreferencesPrefletMainWindow
+ *---------------------------------------------------------------------------*/
+
 /*!	\class	PreferencesPrefletMainWindow
  *	\brief	Main window of the preflet.
  */
@@ -44,7 +57,7 @@ public:
 	
 private:
 	BButton* okButton;
-	BButton* revertButton;
+	BButton* saveButton;
 	BTabView* mainView;
 	
 	CategoryPreferencesView* 	catPrefView;

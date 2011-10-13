@@ -18,6 +18,7 @@
 #include <FindDirectory.h>
 #include <GridLayout.h>
 #include <GroupLayout.h>
+#include <Message.h>
 #include <LayoutItem.h>
 #include <Path.h>
 #include <StorageDefs.h>
@@ -57,9 +58,6 @@ PreferencesPrefletMainWindow::PreferencesPrefletMainWindow()
 	 */
 	/* Part 1.	Load old preferences. */
 	status_t status = B_OK;
-	BPath path;
-	BDirectory eventualSettingsDir;
-	BFile eventualSettingsFile;
 	
 	GregorianCalendar* gregorianCalMod = new GregorianCalendar();
 	global_ListOfCalendarModules.AddItem( gregorianCalMod );
@@ -70,99 +68,11 @@ PreferencesPrefletMainWindow::PreferencesPrefletMainWindow()
 		utl_Deb = new DebuggerPrintout( "Did not succeed to read the preferences!" );
 	}
 	
-
-//	// Access the overall settings directory
-//	status = find_directory( B_USER_SETTINGS_DIRECTORY,
-//							 &path,
-//							 true );	// Create directory if necessary
-//	
-//	// Descent to application's settings directory
-//	path.Append( "Eventual" );
-//	eventualSettingsDir.SetTo( path.Path() );
-//	status = eventualSettingsDir.InitCheck();
-//	switch ( status )
-//	{
-//		case B_ENTRY_NOT_FOUND:
-//			// The directory does not exist. Create it!
-//			status = eventualSettingsDir.CreateDirectory( path.Path(),
-//														  &eventualSettingsDir );
-//			if ( status != B_OK )
-//			{
-//				/* Panic! */
-//				BString sb;
-//				sb << "Error in creating Eventual Settings directory! Error = " << ( uint32 )status;
-//				deb = new DebuggerPrintout( sb.String() );
-//				exit( 1 );
-//			}
-//			
-//			/* I assume at this point the directory is set. */
-//			break;
-//		
-//		case B_NAME_TOO_LONG:	/* Intentional fall-through */
-//		case B_BAD_VALUE:
-//		case B_FILE_ERROR:
-//		case B_NO_MORE_FDS:
-//			deb = new DebuggerPrintout( "Name is too long, input is invalid or node is busy." );
-//			exit( 1 );
-//			break;
-//			
-//		case B_LINK_LIMIT:
-//			deb = new DebuggerPrintout( "Loop is detected in the filesystem!" );
-//			exit( 1 );
-//			break;
-//			
-//		case B_BUSY:
-//			deb = new DebuggerPrintout( "The directory does not exist!" );
-//			exit( 1 );
-//			break;
-//		
-//		case B_OK:				/* Everything went smooth */
-//			break;
-//			
-//		default:
-//			deb = new DebuggerPrintout( "Unknown error has occurred." );
-//			break;
-//		
-//	};
-//	
-//	/* Anyway, at this point the directory is set, or we have exitted. */
-//	path.Append( "Preferences" );
-//	eventualSettingsFile.SetTo( path.Path(),
-//							    B_READ_ONLY | B_CREATE_FILE );
-//							   
-//	if ( eventualSettingsFile.InitCheck() != B_OK )
-//	{
-//		/* Panic! */
-//		exit( 1 );
-//	}
-//	
-//	status = global_Preferences.Unflatten( &eventualSettingsFile );
-//	switch ( status )
-//	{
-//		case B_NO_MEMORY:
-//			// Not enough memory to load the preferences. Exitting...
-//			exit( 1 );
-//			break;
-//			
-//		case B_BAD_VALUE:
-//		default:
-//			// Set default preferences
-//			deb = new DebuggerPrintout( "Populating list of categories with NULL." );
-//			
-//			PopulateListOfCategories( NULL );
-//			
-//			break;
-//			
-//		case B_OK:
-//			// Read preferences successfully.
-//			deb = new DebuggerPrintout( "Populating list of categories with Preferences message." );
-//			PopulateListOfCategories( &global_Preferences );
-//			break;
-//	};
-//	eventualSettingsFile.Unset();
+	utl_RegisterFileType();
 	
 	
 	/* Part 2.  Set up the window. */
+	BMessage* toSend = NULL;
 	BLayoutItem* layoutItem = NULL;
 	BView* background = new BView( BWindow::Bounds(), "Background", B_FOLLOW_ALL, 0 );
 	BGroupLayout* backgroundLayout = new BGroupLayout( B_VERTICAL );
@@ -189,25 +99,33 @@ PreferencesPrefletMainWindow::PreferencesPrefletMainWindow()
 	backgroundLayout->AddItem( 1, gridLayout, 0 );
 	gridLayout->SetExplicitAlignment( BAlignment( B_ALIGN_USE_FULL_WIDTH, B_ALIGN_BOTTOM ) );
 
-	
+	// Adding buttons
+	toSend = new BMessage( kSaveAndClose );
 	okButton = new BButton( BRect( 0, 0, 1, 1),
 				  		     "Ok button",
-					   		 "Ok",
-					   		 NULL );
-	revertButton = new BButton( BRect( 0, 0, 1, 1),
-					 	 		 "Revert button",
-							     "Revert",
-							     NULL );
-	if ( !okButton || !revertButton )
+					   		 "Save and close",
+					   		 toSend );
+	if ( !okButton || !toSend )
+	{
+		/* Panic! */
+		exit( 1 );
+	}
+	
+	toSend = new BMessage( kJustSave );
+	saveButton = new BButton( BRect( 0, 0, 1, 1),
+					 	 		 "Save button",
+							     "Save without closing",
+							     toSend );
+	if ( !toSend || !saveButton )
 	{
 		/* Panic! */
 		exit( 1 );
 	}
 	okButton->ResizeToPreferred();
-	revertButton->ResizeToPreferred();
+	saveButton->ResizeToPreferred();
 	
 	// Lay out all items
-	layoutItem = gridLayout->AddView( revertButton, 0, 0 );
+	layoutItem = gridLayout->AddView( saveButton, 0, 0 );
 	layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_LEFT, B_ALIGN_MIDDLE ) );
 	
 	layoutItem = gridLayout->AddView( okButton, 1, 0 );
@@ -269,6 +187,7 @@ PreferencesPrefletMainWindow::PreferencesPrefletMainWindow()
 	mainView->AddTab( calModPrefView, tab );
 	tab->SetLabel( "Calendars" );
 	
+	// Constructing the fourth tab
 	timePrefView = new TimePreferencesView( r );
 	if ( !timePrefView ) {
 		/* Panic! */
@@ -278,7 +197,7 @@ PreferencesPrefletMainWindow::PreferencesPrefletMainWindow()
 	mainView->AddTab( timePrefView, tab );
 	tab->SetLabel( "Times" );
 	
-	// Constructing the fourth tab
+	// Constructing the fivth tab
 	aboutView = new AboutView( r );
 	if ( !aboutView ) {
 		/* Panic! */
@@ -306,20 +225,7 @@ PreferencesPrefletMainWindow::PreferencesPrefletMainWindow()
  */
 PreferencesPrefletMainWindow::~PreferencesPrefletMainWindow()
 {
-	status_t status = B_OK;
 	
-	if ( emailPrefView )
-	{
-		emailPrefView->RemoveSelf();
-		delete emailPrefView;
-		emailPrefView = NULL;	
-	}
-	
-	status = pref_SaveAllPreferences();
-	if ( B_OK != status )
-	{
-		utl_Deb = new DebuggerPrintout( "Did not succeed to write the preferences!" );	
-	}
 }
 
 
@@ -329,11 +235,30 @@ PreferencesPrefletMainWindow::~PreferencesPrefletMainWindow()
  */
 void PreferencesPrefletMainWindow::MessageReceived(BMessage* message)
 {
+	status_t status = B_OK;
+	
 	switch( message->what )
 	{
+		case kJustSave:		// Intentional fall-through
+		case kSaveAndClose:
+		
+			// Saving the preferences
+			status = pref_SaveAllPreferences();
+			if ( B_OK != status )
+			{
+				utl_Deb = new DebuggerPrintout( "Did not succeed to write the preferences!" );	
+			}
+			
+			// Quitting only if specially requested
+			if ( message->what == kSaveAndClose )
+			{
+				this->PostMessage( B_QUIT_REQUESTED );
+			}
+			
+			break;
 		default:
-		  BWindow::MessageReceived( message );
-		  break;
+			BWindow::MessageReceived( message );
+			break;
 	}
 }	// <-- end of function PreferencesPrefletMainWindow::MessageReceived
 

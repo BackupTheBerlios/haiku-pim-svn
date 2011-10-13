@@ -142,6 +142,9 @@ CategoryPreferencesView::CategoryPreferencesView( BRect frame )
 	gridLayout->SetMaxColumnWidth( 0, r.Width()-70 );
 	gridLayout->SetMaxColumnWidth( 1, r.Width()-66 );
 	
+	// Add categories to the list
+	PopulateCategoriesView();
+	
 	/* Creating the buttons */
 	// Add new category button
 	toSend = new BMessage( kAddNewCategory );
@@ -201,7 +204,8 @@ CategoryPreferencesView::CategoryPreferencesView( BRect frame )
 	layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_LEFT, B_ALIGN_TOP ) );
 	
 	// Create the menu
-	listMenu = new CategoryMenu( "Select category to merge to:", true );
+	BMessage templateMessage( kMergeIntoCategory );
+	listMenu = new CategoryMenu( "Select category to merge to:", true, &templateMessage );
 	if ( !listMenu )
 	{
 		/* Panic! */
@@ -234,6 +238,34 @@ CategoryPreferencesView::CategoryPreferencesView( BRect frame )
 	gridLayout->InvalidateLayout();
 	
 }	// <-- end of constructor of CategoryPreferencesView
+
+
+/*!	\brief		Populate the Categories view with currently existing categories.
+ *		\details		This function accesses the global list of categories and adds
+ *						a category from the global list to the categories view.
+ */
+void		CategoryPreferencesView::PopulateCategoriesView( void )
+{
+	// Sanity check
+	if ( ( global_ListOfCategories.IsEmpty() ) ||
+		  ( !listView ) )
+	{
+		return;
+	}
+	
+	CategoryListItem* toAdd = NULL;
+	int index, limit = global_ListOfCategories.CountItems();
+	
+	for ( index = 0; index < limit; ++index )
+	{
+		toAdd = new CategoryListItem( ( Category* )global_ListOfCategories.ItemAt( index ) );
+		if ( toAdd ) {
+			listView->AddItem( toAdd );
+		}
+	}
+	
+}	// <-- end of function CategoryPreferencesView::PopulateCategoriesView
+
 
 
 /*!	\brief		Destructor of CategoryPreferencesView
@@ -284,6 +316,11 @@ void	CategoryPreferencesView::AttachedToWindow( void )
 	editButton->SetTarget( this );
 	listView->SetTarget( this );
 	
+	for ( int i = 0; i < listMenu->CountItems(); ++i )
+	{
+		( listMenu->ItemAt( i ) )->SetTarget( this );
+	}
+	
 	BView::AttachedToWindow();
 	
 }	// <-- end of function CategoryPreferencesView::AttachedToWindow
@@ -300,10 +337,8 @@ void	CategoryPreferencesView::MessageReceived( BMessage *in )
 	}
 	
 	BMessage* toSend = NULL;
-	
 	BString sb;
-	DebuggerPrintout* deb = NULL;
-	
+
 	Category 	stub( BString("") ),
 				receivedFromUpdate( BString("") );
 	ColorUpdateWindow* cuWindow;
@@ -350,7 +385,9 @@ void	CategoryPreferencesView::MessageReceived( BMessage *in )
 				/* Panic! */
 				exit( 1 );	
 			}
-			listView->AddItem( listItem );
+			if ( listView->AddItem( listItem ) ) {
+				AddCategoryToGlobalList( receivedFromUpdate );
+			}
 			
 			// Adding category to the Menu
 			toSend = new BMessage( kMergeIntoCategory );
@@ -358,7 +395,7 @@ void	CategoryPreferencesView::MessageReceived( BMessage *in )
 				/* Panic! */
 				exit( 1 );
 			}
-			toSend->AddString( "Merge to", receivedFromUpdate.categoryName );
+			toSend->AddString( "Category", receivedFromUpdate.categoryName );
 			menuItem = new CategoryMenuItem( receivedFromUpdate, toSend );
 			if ( ! menuItem )
 			{
@@ -399,13 +436,13 @@ void	CategoryPreferencesView::MessageReceived( BMessage *in )
 				break;	
 			}
 			stub.categoryName = listItem->GetLabel();
-			errorCode = in->FindString( "Merge to", &( receivedFromUpdate.categoryName ) );
+			errorCode = in->FindString( "Category", &( receivedFromUpdate.categoryName ) );
 			if ( ( errorCode != B_OK ) || ( stub.categoryName == receivedFromUpdate.categoryName ) )
 			{
 				// Can't merge category.
+				utl_Deb = new DebuggerPrintout( "You're probably trying to merge a category into itself." );
 				break;
 			}
-			
 			
 			tempBool = MergeCategories( stub.categoryName, receivedFromUpdate.categoryName );
 			

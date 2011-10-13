@@ -48,6 +48,7 @@ class CategoryPreferencesView
 		BScrollView* scroller;
 		BStringView* mergeToLabel;
 
+		void	PopulateCategoriesView( void );
 };
 
 #endif // _CATEGORY_PREFERENCES_VIEW_H_

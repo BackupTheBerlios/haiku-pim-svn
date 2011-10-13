@@ -63,7 +63,7 @@ EmailPreferencesView::EmailPreferencesView( BRect frame )
 	
 	explanationString = new BStringView( BRect( 0, 0, 1, 1 ),
 										 "Explanation",
-										 "Currently, Eventual supports only simpliest E-mail services." );
+										 "Currently, \"Eventual\" supports only simpliest E-mail services." );
 	if ( ! explanationString )
 	{
 		/* Panic! */
@@ -154,7 +154,7 @@ EmailPreferencesView::~EmailPreferencesView()
 	}
 	
 	BString sb;
-	
+
 	if ( senderEmail ) {
 		sb.SetTo( senderEmail->Text() );
 		if ( prefs && B_OK != prefs->UpdateReplyToAddress( sb ) )
