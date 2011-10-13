@@ -12,6 +12,19 @@
 #include "TimeRepresentation.h"
 #include "CalendarModule.h"
 
+/*---------------------------------------------------------------------------------
+ *			Applications' signatures and MIME types section
+ *--------------------------------------------------------------------------------*/
+
+extern const char*		kPreferencesPrefletApplicationSignature;
+
+extern const char*		kEventEditorApplicationSignature;
+
+extern const char*		kEventServerApplicationSignature;
+ 
+extern const char*		kEventViewerApplicationSignature;
+
+extern const char*		kEventFileMIMEType;
 
 /*---------------------------------------------------------------------------------
  *			Calendar modules section
@@ -41,6 +54,10 @@ extern BMessage global_Preferences;		//!< Message with all existing preferences.
  *			Service routines section
  *--------------------------------------------------------------------------------*/
 
+	/* Register the application's filetype if it isn't already registered. */
+void	utl_RegisterFileType( void );
+
+	/* Check if the string is valid */
 bool 	utl_CheckStringValidity( BString& input );
 
 	/* Syntactical verification of Email address */
@@ -82,9 +99,28 @@ private:
 
 };
 
+	/* Pre-created debugger printout. */
 extern DebuggerPrintout* utl_Deb;
 
 
+/*----------------------------------------------------------------
+ *				MIME type setup section
+ *---------------------------------------------------------------*/
+ 
+/*!	\brief		This structure helps to define the attributes of the Event files.
+ */
+struct DefaultAttribute {
+	const char*	internalName;
+	const char* humanReadableName;
+	uint32		type;
+	bool			publicAttr;
+	bool			editableAttr;
+	bool 			indexedAttr;
+	int			fieldWidth;
+};
+
+
+extern		struct DefaultAttribute		AttributesArray[];
 
 
 
