@@ -164,6 +164,7 @@ void		GeneralHourMinControl::ClearUI( void )
 	}
 	
 	if ( fSelectorMenuBar ) {
+		fSelectorMenuBar->RemoveSelf();
 		delete fSelectorMenuBar;		// This also deletes all menus - hours and minutes
 		
 		fSelectorMenuBar = NULL;
@@ -222,8 +223,6 @@ BMenu* GeneralHourMinControl::CreateHoursMenu()
 	else	// We're building a matrix menu
 	{
 		toReturn = new BMenu( "HoursMenu", B_ITEMS_IN_MATRIX );
-//									200, 400 );
-//									width, height );
 	}
 	if ( ! toReturn ) {
 		/* Panic! */
@@ -263,6 +262,17 @@ BMenu* GeneralHourMinControl::CreateHoursMenu()
 	{
 		/* Build a matrix menu */
 		BuildMatrixMenu( toReturn );
+	}
+
+	// Update targets of the menu
+	BMenuItem* toCorrect = NULL;
+	int limit = toReturn->CountItems();
+	for ( int i = 0; i < limit; ++i )
+	{
+		toCorrect = ( BMenuItem* )toReturn->ItemAt( i );
+		if ( toCorrect ) {
+			toCorrect->SetTarget( this );
+		}	
 	}
 
 	return toReturn;	
@@ -416,6 +426,17 @@ BMenu* GeneralHourMinControl::CreateMinutesMenu()
 		}
 		
 	}	/* <-- end of "for (minutes from 0 to the limit)" */
+	
+	// Update targets of the menu
+	BMenuItem* toCorrect = NULL;
+	int limit = toReturn->CountItems();
+	for ( int i = 0; i < limit; ++i )
+	{
+		toCorrect = ( BMenuItem* )toReturn->ItemAt( i );
+		if ( toCorrect ) {
+			toCorrect->SetTarget( this );
+		}	
+	}
 	
 	return toReturn;	
 }	/* <-- end of function GeneralHourMinControl::CreateMinutesMenu */
@@ -1097,7 +1118,7 @@ void		GeneralHourMinControl::SetValue( int32 in )
 	
 	if ( bDoesCheckBoxExist && this->fCheckBox )
 	{
-		fCheckBox->SetValue( GeneralHourMinControl_GET_CHECK_BOX_VALUE( toSet ) );
+		this->SetCheckBoxValue( GeneralHourMinControl_GET_CHECK_BOX_VALUE( toSet ) );
 	}
 	
 }	// <-- end of function GeneralHourMinControl::SetValue

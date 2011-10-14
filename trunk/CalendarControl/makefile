@@ -25,7 +25,8 @@ TYPE= SHARED
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
 SRCS= 	CalendarControl.cpp	\
-			GeneralHourMinControl.cpp
+			GeneralHourMinControl.cpp	\
+			TimeHourMinControl.cpp
 		
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -68,6 +69,7 @@ SYSTEM_INCLUDE_PATHS =
 LOCAL_INCLUDE_PATHS = ../CalendarModule	\
 		../TimeRepresentation			\
 		../PreferencesClasses			\
+		../CategoryItem					\
 		../Utilities
 
 #	specify the level of optimization that you desire

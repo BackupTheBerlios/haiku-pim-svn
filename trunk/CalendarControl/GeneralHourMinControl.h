@@ -101,19 +101,13 @@ class GeneralHourMinControl
 		virtual void		AttachedToWindow();
 		
 		// General functions
-//		virtual void		SetMessage( BMessage* in );
-//		virtual BMessage*	Message() const;
-//		virtual uint32		Command() const;
 		virtual void		SetEnabled( bool in );
-//		virtual bool		IsEnabled() const;		// No need to change
-		
 		virtual void		SetCheckBoxLabel( const BString& label = BString( "" ) );
 		virtual BString	GetCheckBoxLabel( void ) const;
 		virtual void		SetValue( int32 value );
 		virtual int32		Value( void ) const;
 		virtual void		SetLabel( const char* in );
 		virtual void 		SetLabel( const BString& in );
-//		virtual const char*	Label( void ) const;
 		
 		// Class-specific functions
 		virtual TimeRepresentation	GetCurrentTime( bool* hasCheckBox, bool* checkBoxValue ) const;
