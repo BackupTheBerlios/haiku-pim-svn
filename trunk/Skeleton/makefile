@@ -49,7 +49,8 @@ LIBS= 	be \
 		CalendarModule \
 		CalendarControl	\
 		CategoryItem	\
-		Utilities
+		Utilities		\
+		PreferencesClasses
 		
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
@@ -72,7 +73,8 @@ LOCAL_INCLUDE_PATHS = ../CalendarControl.new	\
 		../TimeRepresentation	\
 		../CalendarModule		\
 		../Utilities			\
-		../CategoryItem
+		../CategoryItem		\
+		../PreferencesClasses
 
 #	specify the level of optimization that you desire
 #	NONE, SOME, FULL

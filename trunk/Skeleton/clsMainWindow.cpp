@@ -1,3 +1,5 @@
+#include <GroupLayout.h>
+#include <LayoutItem.h>
 #include <String.h>
 #include <Alert.h>
 #include <Point.h>
@@ -8,6 +10,8 @@
 #include "clsApp.h"
 #include "clsMainWindow.h"
 #include "CalendarControl.h"
+#include "GeneralHourMinControl.h"
+#include "TimeHourMinControl.h"
 #include "GregorianCalendarModule.h"
 #include "CategoryItem.h"
 #include "Utilities.h"
@@ -23,6 +27,15 @@ MainView::MainView(BRect frame)
 			B_FRAME_EVENTS|B_WILL_DRAW|B_FULL_UPDATE_ON_RESIZE)
 {
 	this->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+	
+	BGroupLayout* layout = new BGroupLayout( B_VERTICAL );
+	if ( !layout ) { 
+		// Panic! 
+		exit( 1 );
+	}
+	this->SetLayout( layout );
+	layout->SetInsets( 10, 5, 10, 5 );
+	
 	BRect tempRect = this->Bounds();
 	tempRect.InsetBy(5, 5);
 	tempRect.bottom = tempRect.top+70;
@@ -37,56 +50,92 @@ MainView::MainView(BRect frame)
 				"calendar",
 				"Date:");
 				
-	this->AddChild(cont);
-	AttachedToWindow();
-	cont->AttachedToWindow();
+	layout->AddView( cont );
 	
 	tempRect.top = tempRect.bottom + 205;
 	tempRect.bottom = tempRect.top + 70;
 	
-	HourMinControl* hmControl = new HourMinControl( tempRect,
-													"time",
-													"Time:" );
-	if ( !hmControl ) { exit(1); }
-	printf ("HMcontrol created successfully\n");
-	this->AddChild( hmControl );
-	AttachedToWindow();
-	hmControl->AttachedToWindow();
+	GeneralHourMinControl* ghmControl = new GeneralHourMinControl( tempRect,
+																		"time",
+																		"Time:"
+																		);
+	if ( !ghmControl ) { exit(1); }
+	printf ("GHMcontrol created successfully\n");
+//	ghmControl->SetMinutesLimit( 38 );
+	ghmControl->SetHoursLimit( 72 );
 	
-	rgb_color color;
-	color.set_to( 0, 0, 1, 255 );
-	BString string1("Attempt патамучто Ыыы!"), string2("Category editor");
+	layout->AddView( ghmControl );
 	
-	ColorUpdateWindow* updateWindow = new ColorUpdateWindow( BPoint( 90, 90 ),
-															 string1,
-															 color,
-															 true,
-															 string2,
-															 ( BLooper*)this->Window() );
-	if ( updateWindow )
+	ghmControl->SetCurrentTime( 16, 25 );
+	
+	ghmControl->SetCheckBoxLabel( BString( "A!" ) );
+	
+	ghmControl->SetCheckBoxValue( true );
+
+	BStringView* stringView = new BStringView( BRect( 0, 0, 1, 1 ),
+															"timeDisplay",
+															"00:00 false" );
+	if ( ! stringView )
 	{
-//		updateWindow->Show();
+		// Panic! 
+		exit( 1 );
 	}
-															 
-															 
+	stringView->ResizeToPreferred();
+	layout->AddView( stringView );
+	
+	tempRect.top = tempRect.bottom + 10;
+	tempRect.bottom = tempRect.top + 20;
+	
+	
+	BMessage* toSend = new BMessage( kTimeControlUpdated );
+	TimeHourMinControl* timeControl = new TimeHourMinControl( tempRect,
+															"HourMin",
+															"Start time:");
+	if ( ! timeControl ) { exit(1); }
+	layout->AddView( timeControl );
+	timeControl->SetMessage( toSend );
+															
+		
+	AttachedToWindow();
 	
 //	cont->SetEnabled(false);
 }
 
 void MainView::FrameResized(float width, float height) {
+	GeneralHourMinControl* child;
+	
 	BView::ResizeTo(width, height);
 	BView::FrameResized(width, height);
 	for (int i = 0; i < this->CountChildren(); i++) {
 		((BView*)(this->ChildAt(i)))->FrameResized(width, height);
 	}
+	
+	child = ( GeneralHourMinControl* )this->FindView( "time" );
+		
+	if (	child )
+		child->SetCheckBoxLabel( BString( "A!" ) );
+
 }
 	
 void MainView::AttachedToWindow(void) {
+	GeneralHourMinControl* ghmControl = ( GeneralHourMinControl* )this->FindView( "time" );
+	TimeHourMinControl* timeControl = ( TimeHourMinControl* )this->FindView( "HourMin" );
 	BView::AttachedToWindow();
 	BView* child = this->ChildAt(0);
 	while (!child) {
 		child->AttachedToWindow();
 		child->NextSibling();
+	}
+	
+	if ( Looper() ) {
+		Looper()->AddHandler( this );
+	}
+	
+	if ( ghmControl ) {
+		ghmControl->SetTarget( this->Window() );
+	}
+	if ( timeControl ) {
+		timeControl->SetTarget( this->Window() );
 	}
 }
 
@@ -150,30 +199,36 @@ BBitmap* MainView::CreateIcon(const rgb_color colorIn)
 
 void clsMainWindow::MessageReceived(BMessage * Message)
 {
-	DebuggerPrintout* deb = NULL;
-	bool dirty = false;
-	BString sb, tempString;
-	BPoint pt;
-	
-	sb << "New message has arrived! What = 0x" << Message->what;
-	deb = new DebuggerPrintout( sb.String() );
+	BString sb;
+	uint32	tempUint32;
+	bool		tempBool;
+	BStringView* stringView = NULL;
 	
 	switch(Message->what)
 	{
-/*		case (B_MOUSE_DOWN):
-			pt = Message->FindPoint("where");
-			sb << "Mouse down at " << pt.x << " and  " << pt.y;
-			al = new BAlert("AAA", sb.String(), "Ok");
-			if (al) al->Go();
-*/	
-		case kColorSelected:
-			deb = new DebuggerPrintout("Color selected message arrived!");
+		case kGeneralHourMinControlUpdated:
+		case kTimeControlUpdated:
+			sb.Truncate( 0 );
 			
-			Message->FindBool( "Dirty", &dirty );
-			Message->FindString( "New string", &tempString );
+			if ( Message->FindInt32( kHoursValueKey.String(), ( int32* )&tempUint32 ) == B_OK ) {
+				sb << tempUint32 << ':';
+			}
+			if ( Message->FindInt32( kMinutesValueKey.String(), ( int32* )&tempUint32 ) == B_OK ) {
+				sb << tempUint32;
+			}
+			sb << ' ';
+			if ( Message->FindBool( kCheckBoxValueKey.String(), &tempBool ) == B_OK ) {
+				sb << ( tempBool ? "true" : "false" );
+			} else {
+				sb << "false(?)";
+			}
 			
-			sb << "Dirty: " << dirty << ", new string: " << tempString;
-			deb = new DebuggerPrintout( sb.String() );
+			stringView = ( BStringView* )this->FindView( "timeDisplay" );
+			if ( stringView ) {
+				stringView->SetText( sb.String() );
+			}
+			
+			break;
 			
 		default:
 			
