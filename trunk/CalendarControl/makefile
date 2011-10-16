@@ -26,6 +26,7 @@ TYPE= SHARED
 #	in folder names do not work well with this makefile.
 SRCS= 	CalendarControl.cpp	\
 			GeneralHourMinControl.cpp	\
+			DayItem.cpp						\
 			TimeHourMinControl.cpp
 		
 #	specify the resource files to use

@@ -160,9 +160,6 @@ BMenu* TimeHourMinControl::CreateHoursMenu( void )
 	BMenuItem* toAdd;
 	BMessage* toSend;
 	
-	// DEBUGGING
-	utl_Deb = new DebuggerPrintout( "Creating hours menu" );
-	
 	if ( bUse24hClock )	// 24-hours menu
 	{
 		toReturn = new BMenu( "HoursMenu", B_ITEMS_IN_MATRIX );

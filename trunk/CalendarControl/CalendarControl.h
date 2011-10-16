@@ -4,6 +4,8 @@
 #include <interface/TextControl.h>
 #include <interface/Rect.h>
 #include <support/List.h>
+#include <Menu.h>
+#include <PopUpMenu.h>
 #include <InterfaceKit.h>
 
 #include <time.h>
@@ -23,65 +25,19 @@ class GregorianCalendar;
 
 // Message constants
 const uint32	kMonthChanged 		= 'MONT';
-const uint32	kMonthDecreased		= 'MON-';
-const uint32	kMonthIncreased		= 'MON+';
+const uint32	kMonthDecreased	= 'MON-';
+const uint32	kMonthIncreased	= 'MON+';
 const uint32	kYearChanged		= 'YEAR';
 const uint32	kYearDecreased		= 'YEA-';
 const uint32	kYearIncreased		= 'YEA+';
-const uint32	kOpenDateSelector 	= 'DATE';
+const uint32	kOpenDateSelector = 'DATE';
 const uint32	kTodayModified		= 'TODY';
 const uint32	kReturnToToday		= 'RETD';
 const uint32	kHourUpdated		= 'HOUR';
 const uint32	kMinuteUpdated		= 'MINU';
 const uint32	kPMToggled			= 'PMTG';
 
-/*!	\enum	DmyOrder
- *	\brief	Defines the order of the elements in the control string.
- */
-typedef enum DMY_ORDER {
-	kDayMonthYear,
-	kMonthDayYear,
-	kYearMonthDay
-} DmyOrder;
 
-
-
-class DayItem 
-	: 
-	public BMenuItem
-{
-	friend class MonthMenu;
-	friend class BMenu;
-	
-	protected:
-		bool isToday;
-		bool isServiceItem;
-		rgb_color fFrontColor;
-		rgb_color fBackColor;
-		BMessage* invocationMessage;
-		BHandler* targetHandler; 
-	public:
-		DayItem(BString date, BMessage* message);
-		DayItem(const char* date, BMessage *message);
-		virtual ~DayItem() {}
-		
-		virtual void DrawContent();
-		virtual void SetTarget(BHandler* target);
-		
-		virtual void Fire();
-
-//		virtual status_t Invoke(BMessage* message = NULL);
-	 
-		virtual void SetToday(bool in = false) { isToday = in; }
-		virtual void SetServiceItem(bool in = false) { isServiceItem = in; }
-		inline virtual bool IsServiceItem(void) {return isServiceItem;}
-		inline virtual rgb_color	GetFrontColor(void) { return fFrontColor; }
-		virtual void SetFrontColor(rgb_color in);
-		inline virtual rgb_color GetBackColor(void) {return fBackColor;}
-		virtual void SetBackColor(rgb_color in) { fBackColor = in; }
-		
-//		virtual void GetContentSize(float* w, float* h);
-};
 
 
 class MonthMenu
@@ -93,18 +49,8 @@ class MonthMenu
 		virtual ~MonthMenu();
 		
 		virtual void MouseDown(BPoint point);
-		virtual void Open() { 
-//			Show(); 
-//			AllAttached(); 
-//			InvalidateLayout();
-//			Track();
-		}
 };
 
-struct CalendarBasics 
-{
-	TimeRepresentation representedTime;	
-};	
 
 
 /*!	\class	CalendarControl
@@ -112,69 +58,69 @@ struct CalendarBasics
  */
 class CalendarControl 
 	:
-	public BView,
-	virtual public CalendarBasics
+	public BView
 {
 protected:
-	BStringView* label, *dateLabel, *timeLabel;
-	BMenuBar* menuBar;
-	BMenuBar* timeSetting;
-	BCheckBox* pm;
+	// Placeholder for the data
+	TimeRepresentation fRepresentedTime;		//!< Represented time
 	
-	MonthMenu* dateSelector;
-	CalendarModule* calModule;
-	char separator;
-	DmyOrder orderOfElements;
-	void UpdateTargets(BMenu* in);
+	// UI elements
+	BStringView* 	fLabel, *fDateLabel;
+	BMenuBar* 		fMenuBar;
+	BMenu* 		fDateSelector;
 
-	BList weekends;
-	uint32 firstDayOfEveryWeek;
-	bool isControlEnabled;
+	// Internal configuration data
+	BList 	fWeekends;					//!< List of weekends
+	uint32 	fFirstDayOfEveryWeek;	//!< Defines when the week starts
+	bool 		bIsControlEnabled;		//!< If "true", the control is enabled
+	DmyOrder		fDateOrder;				//!< Defines how the date is printed
+	CalendarModule* fCalModule;		//!< Which calendar module is used in this control
+	rgb_color	fColorForWeekends;	//!< Which color is used to mark the weekends
+	rgb_color	fColorForWeekdays;	//!< Which color is used to mark the weekdays
+	rgb_color	fColorForServiceItems;	//!< Which color is used to mark the service items
+	status_t		fLastError;				//!< Used to indicate problems in initialization
 
-	virtual void Init();
+	// Internal functions
+	virtual void InitTimeRepresentation( time_t initialSeconds = 0 );
 	virtual void CreateMenu(void);
-	virtual BMenu* CreateMonthsMenu(map<int, DoubleNames> &listOfMonths);
-	virtual BMenu* CreateYearsMenu(int localYear);
-	
-	
+	virtual BPopUpMenu* CreateMonthsMenu(map<int, DoubleNames> &listOfMonths);
+	virtual BPopUpMenu* CreateYearsMenu(int localYear);
+	virtual void UpdateTargets( BMenu* menuIn = NULL );
 	virtual BString BuildDateRepresentationString(bool useLongMonthNames = true);
 
 public:
 	CalendarControl(BRect frame,
 					const char* name,
-					BString labelCalendar,
-					const TimeRepresentation *trIn = NULL,
-					const BMessage* preferences = NULL );
+					const BString& labelCalendar,
+					const BString& calModule,
+					time_t initialTime = 0 );
 	virtual ~CalendarControl(void);
 	
-	virtual void ParsePreferences( const BMessage* pIn = NULL);
+	/*!	\brief		Used to check status of this control.
+	 *		\details		Usually, last action is reliable only if this function returns B_OK.
+	 */
+	inline virtual status_t	InitCheck( void ) { return fLastError; }
+	
+	virtual void ParsePreferences( void );
 
-	inline virtual void SetSeparator(char sep) { separator = sep; this->UpdateText(); }
-	inline virtual void SetOrder(DmyOrder toSet) { orderOfElements = toSet; this->UpdateText(); }
+	inline virtual void SetOrder( DmyOrder toSet ) { fDateOrder = toSet; this->UpdateText(); }
 
 	virtual void UpdateText();
-	
-	virtual void FrameResized(float width, float height);
+
 	virtual void AttachedToWindow();
-	
-	virtual void MakeFocus(bool focused = true);
 	
 	virtual void MessageReceived (BMessage* in);
 	
 	virtual void SetEnabled(bool toSet = true);
-	inline virtual bool IsEnabled(void) { return isControlEnabled; }
+	inline virtual bool IsEnabled( void ) const { return bIsControlEnabled; }
 	
 	virtual void UpdateYearsMenu(int prevYear, int curYear);
 	
 	inline virtual void SetFirstDayOfWeek(uint32 day) {
-			firstDayOfEveryWeek = day;
+			fFirstDayOfEveryWeek = day;
 	}
 	
-	virtual uint32 GetFirstDayOfWeek(void) { return firstDayOfEveryWeek; }
-	
-	virtual void AddDayToWeekends(uint32 day);
-	virtual void RemoveDayFromWeekends(uint32 day);
-	virtual BList GetWeekends(void) { return weekends; }
+	virtual uint32 GetFirstDayOfWeek(void) const { return fFirstDayOfEveryWeek; }
 };
 // <-- end of class CalendarControl
 
