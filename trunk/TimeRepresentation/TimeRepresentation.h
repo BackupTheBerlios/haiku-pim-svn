@@ -22,7 +22,10 @@ const uint32	kWednesday	= 4;
 const uint32	kThursday	= 5;
 const uint32	kFriday		= 6;
 const uint32	kSaturday	= 7;
-const uint32	k7DaysWeek	= 10;
+const uint32	k8thDay		= 8;
+const uint32	k9thDay		= 9;
+const uint32	k10thDay	= 10;
+const uint32	k7DaysWeek	= 20;
 const uint32	kInvalid	= 0xFF;
 
 // #include "CalendarModule.h"

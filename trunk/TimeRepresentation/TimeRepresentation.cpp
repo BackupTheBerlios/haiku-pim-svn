@@ -56,6 +56,8 @@ TimeRepresentation::TimeRepresentation(struct tm& in, BString calModule ) {
  *	\brief			Empty constructor.
  */
 TimeRepresentation::TimeRepresentation() {
+	tm_hour = tm_min = tm_sec = tm_mon = tm_year = 0;
+	tm_wday = kSunday;
 	this->fCalendarModule.Truncate(0);
 	this->fIsRepresentingRealDate = false;
 	this->tm_zone = NULL;
