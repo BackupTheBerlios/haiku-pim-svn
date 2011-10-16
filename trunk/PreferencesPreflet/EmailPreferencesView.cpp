@@ -44,6 +44,8 @@ EmailPreferencesView::EmailPreferencesView( BRect frame )
 	explanationString( NULL ),
 	explanationString2( NULL )
 {
+	BMessage* toSend = NULL;
+	
 	EmailPreferences* emailPrefs = pref_GetEmailPreferences();
 	if ( !emailPrefs )
 	{
@@ -89,16 +91,23 @@ EmailPreferencesView::EmailPreferencesView( BRect frame )
 		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_CENTER, B_ALIGN_TOP ) );
 	}
 
+	/* Sender email */
+	toSend = new BMessage( kVerifyEmail );
+	if ( !toSend ) {
+		/* Panic! */
+		exit( 1 );
+	}
 	senderEmail = new BTextControl( BRect( 0, 0, 1, 1 ),
 								    "Sender Email",
 								    "Your E-mail address:",
 								    ( emailPrefs->GetReplyToAddress() ).String(),
-								    NULL );
+								    toSend );
 	if ( !senderEmail ) {
 		/* Panic! */
 		exit( 1 );
 	}
 	senderEmail->ResizeToPreferred();
+	senderEmail->SetTarget( this );
 	senderEmail->SetDivider( ( frame.Width() / 2 ) - 5 );
 	senderEmail->SetAlignment( B_ALIGN_RIGHT, B_ALIGN_LEFT );
 	layoutItem = groupLayout->AddView( senderEmail );
@@ -106,34 +115,48 @@ EmailPreferencesView::EmailPreferencesView( BRect frame )
 		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_USE_FULL_WIDTH, B_ALIGN_TOP ) );
 	}
 	
+	/* Mail server address */
+	toSend = new BMessage( kVerifyServer );
+	if ( !toSend ) {
+		/* Panic! */
+		exit( 1 );
+	}
 	mailServerAddress = new BTextControl( BRect( 0, 0, 1, 1 ),
 						  			     "SMTP Server",
 								        "Outgoing mail server (SMTP) address:",
 								    	  ( emailPrefs->GetMailServerAddress() ).String(),
-								    	  NULL );
+								    	  toSend );
 	if ( !mailServerAddress ) {
 		/* Panic! */
 		exit( 1 );
 	}
 	mailServerAddress->ResizeToPreferred();
 	mailServerAddress->SetDivider( ( frame.Width() / 2 ) - 5 );
+	mailServerAddress->SetTarget( this );
 	mailServerAddress->SetAlignment( B_ALIGN_RIGHT, B_ALIGN_LEFT );
 	layoutItem = groupLayout->AddView( mailServerAddress );
 	if ( layoutItem ) {
 		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_USE_FULL_WIDTH, B_ALIGN_TOP ) );
 	}
 	
+	/* Mail server port */
+	toSend = new BMessage( kVerifyServerPort );
+	if ( !toSend ) {
+		/* Panic! */
+		exit( 1 );
+	}
 	mailServerPort = new BTextControl( BRect( 0, 0, 1, 1 ),
 						  			      "SMTP Server Port",
 								         "Outgoing mail server (SMTP) port:",
 								    	  	( emailPrefs->GetMailServerPortAsString() ).String(),
-								    	  	NULL );
+								    	  	toSend );
 	if ( !mailServerPort ) {
 		/* Panic! */
 		exit( 1 );
 	}
 	mailServerPort->ResizeToPreferred();
 	mailServerPort->SetDivider( ( frame.Width() / 2 ) - 5 );
+	mailServerPort->SetTarget( this );
 	mailServerPort->SetAlignment( B_ALIGN_RIGHT, B_ALIGN_LEFT );
 	layoutItem = groupLayout->AddView( mailServerPort );
 	if ( layoutItem ) {
@@ -156,34 +179,34 @@ EmailPreferencesView::~EmailPreferencesView()
 	BString sb;
 
 	if ( senderEmail ) {
-		sb.SetTo( senderEmail->Text() );
+/*		sb.SetTo( senderEmail->Text() );
 		if ( prefs && B_OK != prefs->UpdateReplyToAddress( sb ) )
 		{
 			utl_Deb = new DebuggerPrintout( "Didn't succeed to update reply-to address!" );	
 		}
-		senderEmail->RemoveSelf();
+*/		senderEmail->RemoveSelf();
 		delete( senderEmail );
 		senderEmail = NULL;
 	}
 	
 	if ( mailServerAddress ) {
-		sb.SetTo( mailServerAddress->Text() );
+/*		sb.SetTo( mailServerAddress->Text() );
 		if ( prefs && B_OK != prefs->UpdateMailServerAddress( sb ) )
 		{
 			utl_Deb = new DebuggerPrintout( "Didn't succeed to update mail server address!" );
 		}
-		mailServerAddress->RemoveSelf();
+*/		mailServerAddress->RemoveSelf();
 		delete( mailServerAddress );
 		mailServerAddress = NULL;
 	}
 	
 	if ( mailServerPort ) {
-		sb.SetTo( mailServerPort->Text() );
+/*		sb.SetTo( mailServerPort->Text() );
 		if ( prefs && B_OK != prefs->UpdateMailServerPort( sb ) )
 		{
 			utl_Deb = new DebuggerPrintout( "Didn't succeed to update mail server port!" );
 		}
-		mailServerPort->RemoveSelf();
+*/		mailServerPort->RemoveSelf();
 		delete( mailServerPort );
 		mailServerPort = NULL;
 	}
@@ -206,16 +229,12 @@ EmailPreferencesView::~EmailPreferencesView()
  */
 void		EmailPreferencesView::AttachedToWindow()
 {
-/*	Well, actually, adding the view to window's looper is not needed, since messages
- * from the text boxes aren't needed.
-
 	BLooper* looper = this->Looper();
 	if ( looper && looper->LockLooper() )
 	{
 		looper->AddHandler( ( BHandler* )this );
 		looper->UnlockLooper();	
 	}
-*/	
 	senderEmail->SetTarget( this );
 	mailServerAddress->SetTarget( this );
 	mailServerPort->SetTarget( this );
@@ -223,3 +242,71 @@ void		EmailPreferencesView::AttachedToWindow()
 	BView::AttachedToWindow();
 	
 }	// <-- end of function EmailPreferencesView::AttachedToWindow()
+
+
+
+/*!	\brief		Verify user's input and update the preferences.
+ */
+void 		EmailPreferencesView::MessageReceived( BMessage* in )
+{
+	EmailPreferences* emailPrefs = pref_GetEmailPreferences();
+	if ( !emailPrefs )
+	{
+		return BView::MessageReceived( in );
+	}
+	
+	BTextControl* toCheck;
+	BString sb, originalString;
+	
+	switch( in->what )
+	{
+		case	kVerifyEmail:
+			if ( B_OK != in->FindPointer( "source", ( void** )&toCheck ) ) {
+				toCheck = senderEmail;
+			}
+			if ( !toCheck ) {
+				return BView::MessageReceived( in );
+			}
+			originalString = emailPrefs->GetReplyToAddress();
+			sb.SetTo( toCheck->Text() );
+			if ( B_OK != emailPrefs->UpdateReplyToAddress( sb ) ) {
+				// Didn't succeed to update
+				toCheck->SetText( originalString.String() );
+			}	
+			break;
+
+		case	kVerifyServer:
+			if ( B_OK != in->FindPointer( "source", ( void** )&toCheck ) ) {
+				toCheck = mailServerAddress;
+			}
+			if ( !toCheck ) {
+				return BView::MessageReceived( in );
+			}
+			originalString = emailPrefs->GetMailServerAddress();
+			sb.SetTo( toCheck->Text() );
+			if ( B_OK != emailPrefs->UpdateMailServerAddress( sb ) ) {
+				// Didn't succeed to update
+				toCheck->SetText( originalString.String() );
+			}			
+			break;
+		
+		case	kVerifyServerPort:
+			if ( B_OK != in->FindPointer( "source", ( void** )&toCheck ) ) {
+				toCheck = mailServerPort;
+			}
+			if ( !toCheck ) {
+				return BView::MessageReceived( in );
+			}
+			originalString = emailPrefs->GetMailServerPortAsString();
+			sb.SetTo( toCheck->Text() );
+			if ( B_OK != emailPrefs->UpdateMailServerPort( sb ) ) {
+				// Didn't succeed to update
+				toCheck->SetText( originalString.String() );
+			}
+			break;
+
+		default:
+			BView::MessageReceived( in );
+	};
+	
+}	// <-- end of function EmailPreferencesView::MessageReceived

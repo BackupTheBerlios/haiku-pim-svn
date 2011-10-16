@@ -22,9 +22,9 @@
 #include <View.h>
 
 /* Message constants */
-const uint32	kVerifyEmail 	= 'VEMA';
-const uint32	kVerifyServer 	= 'VSER';
-
+const uint32	kVerifyEmail 	= 'VEma';
+const uint32	kVerifyServer 	= 'VSer';
+const uint32	kVerifyServerPort	=	'VSeP';
 
 
 class EmailPreferencesView
@@ -35,7 +35,7 @@ class EmailPreferencesView
 		EmailPreferencesView( BRect frame );
 		virtual ~EmailPreferencesView();
 		
-//		virtual void MessageReceived( BMessage* in );
+		virtual void MessageReceived( BMessage* in );
 		virtual void AttachedToWindow( void );
 		
 	private:
