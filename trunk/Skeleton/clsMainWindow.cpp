@@ -15,6 +15,7 @@
 #include "GregorianCalendarModule.h"
 #include "CategoryItem.h"
 #include "Utilities.h"
+#include "Preferences.h"
 
 #include <stdio.h>
 
@@ -27,6 +28,16 @@ MainView::MainView(BRect frame)
 			B_FRAME_EVENTS|B_WILL_DRAW|B_FULL_UPDATE_ON_RESIZE)
 {
 	this->SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+	BString sb;
+
+	GregorianCalendar* gregCal = new GregorianCalendar();
+	if (!gregCal) { exit(1); }
+	global_ListOfCalendarModules.AddItem((void*)gregCal);
+
+	if ( B_OK != pref_PopulateAllPreferences() )
+	{
+		utl_Deb = new DebuggerPrintout( "Didn't succeed to parse preferences!" );	
+	}
 	
 	BGroupLayout* layout = new BGroupLayout( B_VERTICAL );
 	if ( !layout ) { 
@@ -40,17 +51,19 @@ MainView::MainView(BRect frame)
 	tempRect.InsetBy(5, 5);
 	tempRect.bottom = tempRect.top+70;
 	
-	GregorianCalendar* gregCal = new GregorianCalendar();
-	if (!gregCal) { exit(1); }
-	listOfCalendarModules.AddItem((void*)gregCal);
 	
 	
 	
 	CalendarControl* cont = new CalendarControl(tempRect,
 				"calendar",
-				"Date:");
-				
-	layout->AddView( cont );
+				"Date:",
+				"Gregorian" );
+	if ( !cont || cont->InitCheck() != B_OK ) {
+		sb << "Error in creating the control! " << cont->InitCheck();
+		utl_Deb = new DebuggerPrintout( sb.String() );
+	} else {
+		layout->AddView( cont );
+	}
 	
 	tempRect.top = tempRect.bottom + 205;
 	tempRect.bottom = tempRect.top + 70;
@@ -60,7 +73,7 @@ MainView::MainView(BRect frame)
 																		"Time:"
 																		);
 	if ( !ghmControl ) { exit(1); }
-	printf ("GHMcontrol created successfully\n");
+	
 //	ghmControl->SetMinutesLimit( 38 );
 	ghmControl->SetHoursLimit( 72 );
 	
