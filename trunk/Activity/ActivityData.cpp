@@ -9,18 +9,44 @@
 // OS includes
 #include <Errors.h>
 
+// POSIX includes
+#include <string.h>
+
+
+/*---------------------------------------------------------------------------
+ *								Definition of class ActivityData
+ *--------------------------------------------------------------------------*/
+
+/*!	\brief		Default constructor
+ */
+ActivityData::ActivityData( BMessage* in )
+	:
+	bNotification( false ),
+	bSound( false ),
+	bEmailToSend( false ),
+	bProgramRun( false ),
+	bVerifiedByUser( true )
+{
+	for ( int i = 0; i < ACTIVITY_NUMBER_OF_EMAIL_ADDRESSES; ++i )
+	{
+		bIsAddressEmpty[ i ] = true;
+	}
+	
+	if ( in ) {
+		Instantiate( in );
+	}
+}	// <-- end of default constructor
+
+
+
 /*!	\brief		Read the activity data from the submitted message.
  *		\details		If the data can't be found, then some kind of defaults is used.
  */
 void		ActivityData::Instantiate( BMessage* in )
 {
-	status_t	toReturn = B_OK;
-	BString& tempString;
-	bool	emailSubjectEmpty 	= false,
-			emailContentsEmpty	= false,
-			emailAddress1Empty	= false,
-			emailAddress2Empty	= false,
-			emailAddress3Empty	= false,
+	BString	tempString;
+	bool		emailSubjectEmpty 	= false,
+				emailContentsEmpty	= false;
 			
 	/* Notification section */
 	if ( ( !in ) || ( ( in->FindBool( "Notification Enabled", &bNotification ) ) != B_OK ) )
@@ -95,31 +121,30 @@ void		ActivityData::Instantiate( BMessage* in )
 		fEmailSubject.SetTo( "" );
 		emailSubjectEmpty = true;
 	}
-	if ( ( !in ) ||
-		  ( ( in->FindString( "Email Address 1", &fEmailAddress1 ) ) != B_OK ) ||
-		  ( fEmailAddress1.CountChars() == 0 ) )
-	{
-		fEmailAddress1.SetTo( "" );
-		emailAddress1Empty = true;
-	}
-	if ( ( !in ) ||
-		  ( ( in->FindString( "Email Address 2", &fEmailAddress2 ) ) != B_OK ) ||
-		  ( fEmailAddress2.CountChars() == 0 ) )
-	{
-		fEmailAddress2.SetTo( "" );
-		emailAddress2Empty = true;
-	}
-	if ( ( !in ) ||
-		  ( ( in->FindString( "Email Address 3", &fEmailAddress3 ) ) != B_OK ) ||
-		  ( fEmailAddress3.CountChars() == 0 ) )
-	{
-		fEmailAddress3.SetTo( "" );
-		emailAddress3Empty = true;
-	}
+		// Reading Email addresses
+	for ( int i = 0; i < ACTIVITY_NUMBER_OF_EMAIL_ADDRESSES; ++i ) {
+		if ( ( !in ) ||
+		  	( ( in->FindString( "Email Address", i, &fEmailAddress[ i ] ) ) != B_OK ) ||
+		  	( strlen( fEmailAddress[ i ].String() ) < 3 ) )
+		{
+			fEmailAddress[ i ].SetTo( "" );
+			bIsAddressEmpty[ i ] = true;
+		}
+	}	// <-- end of "for ( reading Email addresses )"
+	
 	// If there is no Email addresses, or if both contents and subject are empty,
 	// disable sending Email.
-	if ( ( emailSubjectEmpty && emailContentsEmpty ) ||
-		  ( emailAddress1Empty && emailAddress2Empty && emailAddress3Empty ) )
+	if ( emailSubjectEmpty && emailContentsEmpty ) {
+		bEmailToSend = false;
+	}
+	
+	bool allEmpty = true;
+	for ( int i = 0; i < ACTIVITY_NUMBER_OF_EMAIL_ADDRESSES; ++i ) {
+		if ( !bIsAddressEmpty[ i ] ) {
+			allEmpty = false;
+		}
+	}
+	if ( allEmpty )
 	{
 		bEmailToSend = false;
 	}
@@ -148,7 +173,12 @@ status_t		ActivityData::Archive( BMessage* out )
 	}
 	
 	/* Adding data about notification */
-	if ( ( ( toReturn = out->AddBool( "Notification Enabled", bNotification ) ) != B_OK ) ||
+	if ( ( toReturn = out->AddBool( "Notification Enabled", bNotification ) ) != B_OK )
+	{
+		return toReturn;
+	}
+	
+	if ( ( strlen( fNotificationText.String() ) > 0 ) &&
 	     ( ( toReturn = out->AddString( "Notification Text", fNotificationText ) ) != B_OK ) )
 	{
 		return toReturn;
@@ -159,11 +189,10 @@ status_t		ActivityData::Archive( BMessage* out )
 	{
 		return toReturn;
 	}
-	if ( fSoundFile.InitCheck() == B_OK ) {
-		if ( ( toReturn = out->AddString( "Sound File Path", fSoundFile.Path() ) ) != B_OK )
-		{
-			return toReturn;
-		}
+	if ( ( fSoundFile.InitCheck() == B_OK ) &&
+		  ( ( toReturn = out->AddString( "Sound File Path", fSoundFile.Path() ) ) != B_OK ) )
+	{
+		return toReturn;
 	}
 	
 	/* Adding data about program to run */
@@ -185,36 +214,41 @@ status_t		ActivityData::Archive( BMessage* out )
 	{
 		return toReturn;
 	}
-	if ( fEmailContents.CountChars() > 0 ) {
-		if ( ( toReturn = out->AddString( "Email Contents", fEmailContents ) ) != B_OK )
+	if ( ( strlen( fEmailContents.String() ) > 0 ) &&
+		  ( ( toReturn = out->AddString( "Email Contents", fEmailContents ) ) != B_OK ) )
+	{
+		return toReturn;
+	}
+	if ( ( strlen( fEmailSubject.String() ) > 0 ) &&
+		  ( ( toReturn = out->AddString( "Email Subject", fEmailSubject ) ) != B_OK ) )
+	{
+		return toReturn;
+	}
+		// Saving addresses
+	for ( int i = 0; i < ACTIVITY_NUMBER_OF_EMAIL_ADDRESSES; ++i ) {
+		if ( bIsAddressEmpty[ i ] ) {
+			continue;
+		}
+		if ( ( toReturn = out->AddString( "Email Address", fEmailAddress[ i ] ) ) != B_OK )
 		{
 			return toReturn;
 		}
-	}
-	if ( fEmailSubject.CountChars() > 0 ) {
-		if ( ( toReturn = out->AddString( "Email Subject", fEmailSubject ) ) != B_OK )
-		{
-			return toReturn;
-		}
-	}
-	if ( fEmailAddress1.CountChars() > 0 ) {
-		if ( ( toReturn = out->AddString( "Email Address 1", fEmailAddress1 ) ) != B_OK )
-		{
-			return toReturn;
-		}
-	}
-	if ( fEmailAddress2.CountChars() > 0 ) {
-		if ( ( toReturn = out->AddString( "Email Address 2", fEmailAddress2 ) ) != B_OK )
-		{
-			return toReturn;
-		}
-	}
-	if ( fEmailAddress3.CountChars() > 0 ) {
-		if ( ( toReturn = out->AddString( "Email Address 3", fEmailAddress3 ) ) != B_OK )
-		{
-			return toReturn;
-		}
-	}
+	}	// <-- end of "for ( saving addresses )"
 	
 	return toReturn;
 }	// <-- end of function ActivityData::Archive
+
+
+
+/*!	\brief						Adds an Email address.
+ *		\param[in]	addrIn		Address to be added
+ */
+void		ActivityData::SetEmailAddress( const char* toSet, int placeholder )
+{
+	fEmailAddress[ placeholder ].SetTo( toSet );
+	if ( strlen( toSet ) == 0 ) {
+		bIsAddressEmpty[ placeholder ] = true;
+	} else {
+		bIsAddressEmpty[ placeholder ] = false;
+	}
+}	// <-- end of ActivityData::SetEmailAddress

@@ -6,7 +6,7 @@
 #define _ACTIVITY_VIEW_H_
 
 #include <SupportDefs.h>
-
+/*
 class ActivityView
 	:
 	public BView
@@ -18,5 +18,5 @@ public:
 private:
 
 };
-
+*/
 #endif // _ACTIVITY_VIEW_H_

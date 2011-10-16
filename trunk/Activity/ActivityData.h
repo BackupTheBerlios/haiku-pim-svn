@@ -27,12 +27,15 @@ const uint32	kActivityData = 'ACTV';
  *--------------------------------------------------------------------------*/
 
 /*!	\brief		Holds data about the activity to be performed when time arrives.
+ *		\attention	Number of possible Email recipients is hard-coded to be 3.
  */
+#define		ACTIVITY_NUMBER_OF_EMAIL_ADDRESSES		( 3 )
+ 
 class ActivityData 
 {
 public:
-	ActivityData( BMessage* in );
-	virtual	~ActivityData();
+	ActivityData( BMessage* in = NULL );
+	virtual	~ActivityData() {}	// No dynamically allocated data - no need in destructor
 
 	// Archive and unarchive functions
 	virtual status_t	Archive( BMessage* out );
@@ -40,7 +43,7 @@ public:
 	
 	// Getters and setters for the Notification
 	inline virtual void	SetNotification( bool toSet ) { bNotification = toSet; }
-	inline virtual void	SetNotification( bool toSet, const BString& text ) {
+	inline virtual void	SetNotification( bool toSet, const BString& textIn ) {
 		bNotification = toSet;
 		fNotificationText = textIn;
 	}
@@ -48,7 +51,7 @@ public:
 		fNotificationText = textIn;
 	}
 	inline virtual bool	GetNotification( BString* textOut = NULL ) const {
-		if ( textOut ) { textOut->SetTo( fNotificationText; }
+		if ( textOut ) { textOut->SetTo( fNotificationText ); }
 		return bNotification;
 	}
 	
@@ -60,7 +63,7 @@ public:
 	}
 	inline virtual void	SetSoundFile( const BPath& pathIn ) { fSoundFile = pathIn; }
 	inline virtual bool	GetSound( BPath* pathOut = NULL ) const {
-		if ( pathOut ) { pathOut->SetTo( fSoundFile ); }
+		if ( pathOut ) { pathOut->SetTo( fSoundFile.Path() ); }
 		return bSound;
 	}
 	
@@ -79,34 +82,26 @@ public:
 		fCommandLineOptions = paramsIn;
 	}
 	inline virtual bool	GetProgram( BPath* pathOut = NULL, BString* paramsOut = NULL ) const {
-		if ( pathOut ) 	{ pathOut.SetTo( fProgramPath ); }
-		if ( paramsOut )	{ paramsOut.SetTo( fCommandLineOptions ); }
+		if ( pathOut ) 	{ pathOut->SetTo( fProgramPath.Path() ); }
+		if ( paramsOut )	{ paramsOut->SetTo( fCommandLineOptions ); }
 		return bProgramRun;
 	}
 	inline virtual void	SetProgramVerified( bool toSet ) { bVerifiedByUser = toSet; }
-	inline virtual void 	GetProgramVerified( void ) const { return bVerifiedByUser; }
+	inline virtual bool 	GetProgramVerified( void ) const { return bVerifiedByUser; }
 	
 	// Getters and setters for Email
 	inline virtual void	SetEmail( bool toSet ) { bEmailToSend = toSet; }
 	inline virtual void	SetEmailSubject( const BString& subjIn ) { fEmailSubject = subjIn; }
 	inline virtual void	SetEmailContents( const BString& contIn ) { fEmailContents = contIn; }
-	inline virtual void	SetEmailAddress1( const BString& addrIn ) { fEmailAddress1 = addrIn; }
-	inline virtual void	SetEmailAddress2( const BString& addrIn ) { fEmailAddress2 = addrIn; }
-	inline virtual void	SetEmailAddress3( const BString& addrIn ) { fEmailAddress3 = addrIn; }
-	inline virtual bool	GetEmail( BString* subjOut = NULL,
-											 BString* contOut = NULL,
-											 BString* addr1 = NULL,
-											 BString* addr2 = NULL,
-											 BString* addr3 = NULL ) const
-	{
-		if ( subjOut ) { subjOut.SetTo( fEmailSubject ); }
-		if ( contOut ) { contOut.SetTo( fEmailContents ); }
-		if ( addr1 )	{ addr1.SetTo( fEmailAddress1 ); }
-		if ( addr2 )	{ addr1.SetTo( fEmailAddress2 ); }
-		if ( addr3 )	{ addr1.SetTo( fEmailAddress3 ); }
+	inline virtual void	SetEmailAddress( const char* addrIn, int placeholder = 0 );
+	inline virtual bool	GetEmailSubjectAndContents( BString* subjOut, BString* contOut ) {
+		if ( subjOut ) { subjOut->SetTo( fEmailSubject ); }
+		if ( contOut ) { contOut->SetTo( fEmailContents ); }
 		return bEmailToSend;
 	}
-	
+	inline virtual BString GetEmailAddress( int placeholder = 0 ) {
+		return BString( fEmailAddress[ placeholder ] );
+	}
 	
 protected:
 
@@ -120,9 +115,8 @@ protected:
 	bool		bEmailToSend;			//!< Should the Email be sent?
 	BString	fEmailContents;		//!< Contents of the Email (message body)
 	BString	fEmailSubject;			//!< Subject of the Email
-	BString	fEmailAddress1;		//!< Address of receiver 1
-	BString	fEmailAddress2;		//!< Address of receiver 2
-	BString	fEmailAddress3;		//!< Address of receiver 3
+	BString	fEmailAddress[ ACTIVITY_NUMBER_OF_EMAIL_ADDRESSES ];	//!< Addresses of receivers
+	bool		bIsAddressEmpty[ ACTIVITY_NUMBER_OF_EMAIL_ADDRESSES ];//!< "true" if corresponding address placeholder is empty
 	
 	bool		bProgramRun;			//!< Should a program be run?
 	bool		bVerifiedByUser;		//!< Did the user check the program?
