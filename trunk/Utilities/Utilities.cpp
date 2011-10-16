@@ -187,6 +187,11 @@ bool utl_VerifyEmailAddress( const char *address )
   int        count = 0;
   const char *c, *domain;
   static char *rfc822_specials = "()<>@,;:\\\"[]";
+  
+  if ( strlen( address ) == 0 ) {
+		// Empty string
+		return true;
+  }
 
   /* first we validate the name portion (name@domain) */
   for ( c = address;  *c;  c++ ) 
@@ -238,7 +243,7 @@ bool		utl_VerifySeverAddress( const char* address )
   const char *c = address, *domain;
   static char *rfc822_specials = "()<>@,;:\\\"[]";
 
-	if ( strlen( address ) == 0 ) { return false; }
+	if ( strlen( address ) == 0 ) { return true; }
 
   if (!*(domain = ++c)) return false;
   do {
