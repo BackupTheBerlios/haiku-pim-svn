@@ -29,6 +29,7 @@
 const uint32	kCalendarModuleChosen = 'CALM';
 const uint32	kCalendarModuleWeekendDaySelected = 'WKDS';
 const uint32	kCalendarModuleFirstDayOfWeekSelected = 'FDOW';
+const uint32	kCalendarModuleDateOrderSelected = 'DOrS';
 
 /*----------------------------------------------------------------------------
  *		Calendar module preferences view
@@ -46,6 +47,7 @@ class CalendarModulePreferencesView
 		
 		virtual BBox*	CreateWeekendSelectionBox( BRect frame, const BString &id );
 		virtual BMenuField*	CreateWeekStartDayChooser( BRect frame, const BString &id );
+		virtual BMenuField* CreateDayMonthYearOrderChooser( BRect frame, const BString& id );
 		virtual BBox*	BuildColorSelectors( BRect frame, const BString& id );
 		
 		virtual void	ClearOldInterface( void );

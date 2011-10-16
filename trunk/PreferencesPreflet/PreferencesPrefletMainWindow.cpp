@@ -168,14 +168,15 @@ PreferencesPrefletMainWindow::PreferencesPrefletMainWindow()
 	tab->SetLabel( "Categories" );
 	
 	/* Constructing the second tab */
-	emailPrefView = new EmailPreferencesView( r );
+/*	emailPrefView = new EmailPreferencesView( r );
 	if ( !emailPrefView ) {
-		/* Panic! */
+		|* Panic! *|
 		exit( 1 );
 	}
 	tab = new BTab();
 	mainView->AddTab( emailPrefView, tab );
 	tab->SetLabel( "E-mail settings" );
+*/
 	
 	// Constructing the third tab
 	calModPrefView = new CalendarModulePreferencesView( r );
