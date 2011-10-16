@@ -32,6 +32,12 @@ CalendarModulePreferences*	pref_CalendarModulePrefs_original[ NUMBER_OF_CALENDAR
 	/*!	\brief	Modified by the user preferences for every calendar module */
 CalendarModulePreferences*	pref_CalendarModulePrefs_modified[ NUMBER_OF_CALENDAR_MODULES ];
 
+	/*!	\brief	Names of order items. */
+#define	PARSER( value, name )	name,
+char*	DmyOrderNames[] = {
+	DMY_ORDER
+};
+#undef	PARSER
 
 
 /****************************************************************************
@@ -341,8 +347,12 @@ CalendarModulePreferences::CalendarModulePreferences( const BString& id )
 	
 	weekendsColorForMenu.set_to( 255, 0, 0, 255 );	// True red
 	weekdaysColorForMenu 	= ui_color( B_MENU_ITEM_TEXT_COLOR );
+	serviceItemsColorForMenu.set_to( 0, 0, 128, 255 );	// Dark blue
 	weekendsColorForViewer.set_to( 255, 0, 0, 255 );	// True red
 	weekdaysColorForViewer 	= ui_color( B_MENU_ITEM_TEXT_COLOR );
+	serviceItemsColorForViewer.set_to( 0, 0, 128, 255 );	// Dark blue
+	
+	dateOrder = kDayMonthYear;
 	
 	correspondingModule = utl_FindCalendarModule( id );
 	
@@ -390,6 +400,7 @@ CalendarModulePreferences::~CalendarModulePreferences()
 CalendarModulePreferences::CalendarModulePreferences( const BString& id, BMessage* archive )
 {
 	uint32	tempUint32;
+	int8		tempInt8;
 	this->status = B_OK;
 	BString identifier;	
 	
@@ -438,6 +449,13 @@ CalendarModulePreferences::CalendarModulePreferences( const BString& id, BMessag
 		weekendsColorForMenu = RepresentUint32AsColor( tempUint32 );
 	}
 	
+	if ( B_OK != archive->FindInt32( "ServiceItemsColorForMenu", ( int32* )&tempUint32 ) )
+	{
+		serviceItemsColorForMenu.set_to( 0, 0, 128, 255 );
+	} else {
+		serviceItemsColorForMenu = RepresentUint32AsColor( tempUint32 );
+	}
+	
 	if ( B_OK != archive->FindInt32( "WeekdaysColorForViewer", ( int32* )&tempUint32 ) )
 	{
 		weekdaysColorForViewer = ui_color( B_MENU_ITEM_TEXT_COLOR );
@@ -451,6 +469,22 @@ CalendarModulePreferences::CalendarModulePreferences( const BString& id, BMessag
 	} else {
 		weekendsColorForViewer = RepresentUint32AsColor( tempUint32 );
 	}
+	
+	if ( B_OK != archive->FindInt32( "ServiceItemsColorForViewer", ( int32* )&tempUint32 ) )
+	{
+		serviceItemsColorForViewer.set_to( 0, 0, 128, 255 );
+	} else {
+		serviceItemsColorForViewer = RepresentUint32AsColor( tempUint32 );
+	}
+	
+	// Get the day-month-year order
+	if ( B_OK != archive->FindInt8( "DayMonthYearOrder", ( int8* )&tempInt8 ) )
+	{
+		dateOrder = kDayMonthYear;
+	} else {
+		dateOrder = ( DmyOrder )tempInt8;
+	}	
+
 	
 	// Obtain the weekends
 	unsigned char index = 0, limit;
@@ -505,6 +539,9 @@ CalendarModulePreferences::CalendarModulePreferences( const CalendarModulePrefer
 	this->weekdaysColorForMenu = other.weekdaysColorForMenu;
 	this->weekendsColorForViewer = other.weekendsColorForViewer;
 	this->weekendsColorForMenu = other.weekendsColorForMenu;
+	this->serviceItemsColorForViewer = other.serviceItemsColorForViewer;
+	this->serviceItemsColorForMenu = other.serviceItemsColorForMenu;
+	this->dateOrder = other.dateOrder;
 	
 	int i = 0, limit = other.weekends->CountItems();
 	weekends = new BList( limit );
@@ -527,6 +564,9 @@ CalendarModulePreferences CalendarModulePreferences::operator= ( const CalendarM
 	this->weekdaysColorForMenu = other.weekdaysColorForMenu;
 	this->weekendsColorForViewer = other.weekendsColorForViewer;
 	this->weekendsColorForMenu = other.weekendsColorForMenu;
+	this->serviceItemsColorForViewer = other.serviceItemsColorForViewer;
+	this->serviceItemsColorForMenu = other.serviceItemsColorForMenu;
+	this->dateOrder = other.dateOrder;
 	
 	if ( weekends )
 		delete weekends;
@@ -605,44 +645,93 @@ BList*	CalendarModulePreferences::GetWeekends() const
 
 
 
-/*!	\brief		Returns color of the selected configuration
+/*!	\brief		Returns color of weekends
  *		\returns		Color associated with the input
- *		\param[in]	weekends		If "true", looking at weekends, else at weekdays.
  *		\param[in]	viewer		If "true", looking at settings for Event Viewer, else for controls.
  */
-rgb_color CalendarModulePreferences::GetColor( bool weekends, bool viewer ) const
+rgb_color CalendarModulePreferences::GetWeekendsColor( bool viewer ) const
 {
-	if ( weekends ) {
-		if ( viewer ) { return this->weekendsColorForViewer; } else { return weekendsColorForMenu; }
-	} else {
-		if ( viewer ) { return this->weekdaysColorForViewer; } else { return weekdaysColorForMenu; }
+	if ( viewer ) { 
+		return weekendsColorForViewer;
+	} else { 
+		return weekendsColorForMenu;
 	}
 }
 
 
-/*!	\brief		Update color of the selected configuration
+
+/*!	\brief		Returns color of weekdays
+ *		\returns		Color associated with the input
+ *		\param[in]	viewer		If "true", looking at settings for Event Viewer, else for controls.
+ */
+rgb_color CalendarModulePreferences::GetWeekdaysColor( bool viewer ) const
+{
+	if ( viewer ) { 
+		return weekdaysColorForViewer;
+	} else { 
+		return weekdaysColorForMenu;
+	}
+}
+
+
+
+/*!	\brief		Returns color of service items
+ *		\returns		Color associated with the input
+ *		\param[in]	viewer		If "true", looking at settings for Event Viewer, else for controls.
+ */
+rgb_color CalendarModulePreferences::GetServiceItemsColor( bool viewer ) const
+{
+	if ( viewer ) {
+		return serviceItemsColorForViewer;
+	} else {
+		return serviceItemsColorForMenu;
+	}
+}
+
+
+
+/*!	\brief		Update color for displaying weekdays.
  *		\param[in]	color			The new value
- *		\param[in]	weekends		If "true", updating weekends, else updating weekdays.
  *		\param[in]	viewer		If "true", updating settings for Event Viewer, else for controls.
  */
-void		CalendarModulePreferences::SetColor( rgb_color color, bool weekends, bool viewer )
+void		CalendarModulePreferences::SetWeekdaysColor( rgb_color color, bool viewer )
 {
-	BString sb( "Color received: " );
-	sb << "Red = " << color.red << ", ";
-	sb << "Green = " << color.green << ", ";
-	sb << "Blue = " << color.blue << ". ";
-	
-	( weekends ) ? sb << "For weekends " : sb << "For weekdays ";
-	( viewer ) ? sb << "in viewer. " : sb << "in controls.";
-	
-	utl_Deb = new DebuggerPrintout( sb.String() );
-	
-	if ( weekends ) {
-		if ( viewer ) { weekendsColorForViewer = color; } else { weekendsColorForMenu = color; }
+	if ( viewer ) { 
+		weekdaysColorForViewer = color;
 	} else {
-		if ( viewer ) { weekdaysColorForViewer = color; } else { weekdaysColorForMenu = color; }
+		weekdaysColorForMenu = color;
 	}
 }	// <-- end of function CalendarModulePreferences::SetColor
+
+
+/*!	\brief		Update color for displaying weekends.
+ *		\param[in]	color			The new value
+ *		\param[in]	viewer		If "true", updating settings for Event Viewer, else for controls.
+ */
+void		CalendarModulePreferences::SetWeekendsColor( rgb_color color, bool viewer )
+{
+	if ( viewer ) {
+		weekendsColorForViewer = color;
+	} else {
+		weekendsColorForMenu = color;
+	}
+}	// <-- end of function CalendarModulePreferences::SetColor
+
+
+
+/*!	\brief		Update color for displaying service items
+ *		\param[in]	color			The new value
+ *		\param[in]	viewer		If "true", updating settings for Event Viewer, else for controls.
+ */
+void		CalendarModulePreferences::SetServiceItemsColor( rgb_color color, bool viewer )
+{
+	if ( viewer ) { 
+		serviceItemsColorForViewer = color;
+	} else { 
+		serviceItemsColorForMenu = color;
+	}
+}	// <-- end of function CalendarModulePreferences::SetColor
+
 
 
 
@@ -672,16 +761,23 @@ status_t	CalendarModulePreferences::Archive( BMessage* in, bool deep )
 	for ( index = 0; index < limit; ++index )
 	{
 		toReturn = in->AddInt32( "Weekend", ( int32 )( weekends->ItemAt( index ) ) );
-		if ( toReturn != B_OK ) { return toReturn; }		
+		if ( toReturn != B_OK ) { return toReturn; }
 	}	// <-- end of "for ( passing on all weekends )"
 	
 	toReturn = in->AddInt32( "WeekendsColorForMenu", RepresentColorAsUint32( weekendsColorForMenu ) );
 	if ( toReturn != B_OK ) { return toReturn; }
 	toReturn = in->AddInt32( "WeekdaysColorForMenu", RepresentColorAsUint32( weekdaysColorForMenu ) );
 	if ( toReturn != B_OK ) { return toReturn; }
+	toReturn = in->AddInt32( "ServiceItemsColorForMenu", RepresentColorAsUint32( serviceItemsColorForMenu ) );
+	if ( toReturn != B_OK ) { return toReturn; }
 	toReturn = in->AddInt32( "WeekendsColorForViewer", RepresentColorAsUint32( weekendsColorForViewer ) );
 	if ( toReturn != B_OK ) { return toReturn; }
 	toReturn = in->AddInt32( "WeekdaysColorForViewer", RepresentColorAsUint32( weekdaysColorForViewer ) );
+	if ( toReturn != B_OK ) { return toReturn; }
+	toReturn = in->AddInt32( "ServiceItemsColorForViewer", RepresentColorAsUint32( serviceItemsColorForViewer ) );
+	if ( toReturn != B_OK ) { return toReturn; }
+	
+	toReturn = in->AddInt8( "DayMonthYearOrder", ( int8 )dateOrder );
 	if ( toReturn != B_OK ) { return toReturn; }
 	
 	return B_OK;
@@ -694,12 +790,15 @@ status_t	CalendarModulePreferences::Archive( BMessage* in, bool deep )
 bool	CalendarModulePreferences::operator== ( const CalendarModulePreferences& other ) const
 {
 	
-	if ( ( this->id 					!= other.id ) 						||
-		 ( this->ucFirstDayOfWeek 		!= other.ucFirstDayOfWeek ) 		||
-		 ( this->weekendsColorForMenu	!= other.weekendsColorForMenu ) 	||
-		 ( this->weekendsColorForViewer	!= other.weekendsColorForViewer )	||
-		 ( this->weekdaysColorForMenu	!= other.weekdaysColorForMenu )		||
-		 ( this->weekdaysColorForViewer != other.weekdaysColorForViewer ) )
+	if ( ( this->id 					!= other.id ) 											||
+		 ( this->ucFirstDayOfWeek 		!= other.ucFirstDayOfWeek ) 					||
+		 ( this->weekendsColorForMenu	!= other.weekendsColorForMenu ) 				||
+		 ( this->weekendsColorForViewer	!= other.weekendsColorForViewer )		||
+		 ( this->weekdaysColorForMenu	!= other.weekdaysColorForMenu )				||
+		 ( this->weekdaysColorForViewer != other.weekdaysColorForViewer ) 		||
+		 ( this->serviceItemsColorForMenu	!= other.serviceItemsColorForMenu ) ||
+		 ( this->serviceItemsColorForViewer != other.serviceItemsColorForViewer ) ||
+		 ( this->dateOrder 			!= other.dateOrder ) )
 	{
 		return false;
 	}
@@ -717,4 +816,3 @@ bool	CalendarModulePreferences::operator== ( const CalendarModulePreferences& ot
 	return true;
 	
 }	// <-- end of comparison operator.
-

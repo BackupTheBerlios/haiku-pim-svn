@@ -49,6 +49,37 @@ status_t		pref_SaveCalendarModulePreferences( BMessage* message );
 void			pref_DeleteCalendarModulePreferences( void );
 
 
+// Fun with x-macros
+#define	DMY_ORDER_NUMBER_OF_ELEMENTS	3
+#define	DMY_ORDER	\
+	PARSER(	kDayMonthYear,	"Day Month Year" )	\
+	PARSER(	kMonthDayYear,	"Month Day Year" )	\
+	PARSER(	kYearMonthDay, "Year Month Day" )
+	
+
+#ifdef	PARSER
+#undef	PARSER
+#endif	// PARSER
+
+#define	PARSER( value, name )	value,
+enum	DmyOrder	{
+	DMY_ORDER
+};
+#undef PARSER
+
+extern char* DmyOrderNames[];
+
+
+/*!	\brief	Defines the order of the elements in the control string.
+ *
+typedef enum DMY_ORDER {
+	kDayMonthYear = 0,		//!< Day, then Month, then Year
+	kMonthDayYear,				//!< Month, then Day, then Year
+	kYearMonthDay				//!< Year, then Month, then Day
+} DmyOrder;
+ */
+
+
 /*------------------------------------------------------------------
  * 		Preferences of an individual CalendarModule
  *-----------------------------------------------------------------*/
@@ -80,13 +111,22 @@ protected:
 	//! \brief	Color in which weekdays are displayed in the CalendarControl.
 	rgb_color	weekdaysColorForMenu;	
 	
+	//!	\brief	Color in which service items are displayed in the CalendarControl.
+	rgb_color	serviceItemsColorForMenu;
+	
 	//!	\brief	Color in which weekends are displayed in the EventViewer.
 	rgb_color	weekendsColorForViewer;
 	
 	//!	\brief	Color in which weekdays are displayed in the EventViewer.
 	rgb_color	weekdaysColorForViewer;
 	
+	//!	\brief	Color in which service items are displayed in the EventViewer.
+	rgb_color	serviceItemsColorForViewer;
+	
 	BString id;		//!< ID of the relevant calendar module
+
+	//!	\brief	Defines how the data is represented by this module
+	DmyOrder		dateOrder;
 	
 	CalendarModule*		correspondingModule;
 	
@@ -122,8 +162,15 @@ public:
 		return ucFirstDayOfWeek;
 	}
 	
-	virtual void 	SetColor( rgb_color	color, bool weekends = true, bool viewer = true );
-	virtual rgb_color GetColor( bool weekends = true, bool viewer = true ) const;
+	virtual void 	SetWeekendsColor( rgb_color	color, bool viewer = true );
+	virtual rgb_color GetWeekendsColor( bool viewer = true ) const;
+	virtual void 	SetWeekdaysColor( rgb_color	color, bool viewer = true );
+	virtual rgb_color GetWeekdaysColor( bool viewer = true ) const;
+	virtual void 	SetServiceItemsColor( rgb_color	color, bool viewer = true );
+	virtual rgb_color GetServiceItemsColor( bool viewer = true ) const;
+	
+	virtual DmyOrder	GetDayMonthYearOrder( void ) const { return dateOrder; }
+	virtual void	SetDayMonthYearOrder( DmyOrder in ) { dateOrder = in; }
 	
 	virtual CalendarModulePreferences operator= (const CalendarModulePreferences& other);
 	
