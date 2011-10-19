@@ -25,7 +25,10 @@ TYPE= SHARED
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
 SRCS= 	ActivityData.cpp	\
-			ActivityView.cpp
+			ActivityView.cpp	\
+			NotificationView.cpp	\
+			SoundSetupView.cpp	\
+			ProgramSetupView.cpp
 		
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -42,7 +45,8 @@ RSRCS=
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
 LIBS= 	be		\
-	   	stdc++
+	   	stdc++	\
+	   	tracker
 		
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
@@ -61,7 +65,7 @@ SYSTEM_INCLUDE_PATHS =
 #	additional paths to look for local headers
 #	thes use the form: #include "header"
 #	source file directories are automatically included
-LOCAL_INCLUDE_PATHS = 
+LOCAL_INCLUDE_PATHS = ../Utilities
 
 #	specify the level of optimization that you desire
 #	NONE, SOME, FULL

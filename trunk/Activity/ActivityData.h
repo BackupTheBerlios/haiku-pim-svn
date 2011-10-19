@@ -5,6 +5,8 @@
 #ifndef _ACTIVITY_DATA_H_
 #define _ACTIVITY_DATA_H_
 
+// POSIX includes
+#include <stdio.h>
 
 // OS includes
 #include <Path.h>
@@ -31,6 +33,14 @@ const uint32	kActivityData = 'ACTV';
  */
 #define		ACTIVITY_NUMBER_OF_EMAIL_ADDRESSES		( 3 )
  
+ 
+ 
+/*!	\brief		Holds maximum length of command-line options for a scheduled prorgam.
+ *		\details		This number is purely arbitrary; I just don't want users to write
+ *						"War and Peace" in the command-line parameters.
+ */
+#define		ACTIVITY_MAX_ALLOWED_COMMAND_LINE_OPTIONS_LENGTH		( 511 )
+ 
 class ActivityData 
 {
 public:
@@ -56,7 +66,7 @@ public:
 	}
 	
 	// Getters and setters for sound play
-	inline virtual void	SetSound( bool toSet ) { bSound = toSet; }
+			 virtual void	SetSound( bool toSet ) { bSound = toSet; }
 	inline virtual void	SetSound( bool toSet, const BPath& pathIn ) {
 		bSound = toSet;
 		fSoundFile = pathIn;
@@ -68,7 +78,7 @@ public:
 	}
 	
 	// Getters and setters for the program
-	inline virtual void	SetProgram( bool toSet ) { bProgramRun = toSet; }
+	inline virtual void	SetProgram( bool toSet ) { bProgramRun = toSet; printf( "Enabled = %s.\n", toSet ? "true" : "false" ); }
 	inline virtual void	SetProgram( bool toSet, const BPath& pathIn ) {
 		bProgramRun = toSet; fProgramPath = pathIn;
 	}
@@ -76,9 +86,15 @@ public:
 		bProgramRun = toSet; fProgramPath = pathIn; fCommandLineOptions = paramsIn;
 	}
 	inline virtual void	SetProgramPath( const BPath& pathIn ) {
+		
+		printf( "Program path is %s.\n", pathIn.Path() );
+		
 		fProgramPath = pathIn;
 	}
 	inline virtual void	SetProgramOptions( const BString& paramsIn ) {
+		
+		printf( "Program options are: %s.\n", paramsIn.String() );
+		
 		fCommandLineOptions = paramsIn;
 	}
 	inline virtual bool	GetProgram( BPath* pathOut = NULL, BString* paramsOut = NULL ) const {
