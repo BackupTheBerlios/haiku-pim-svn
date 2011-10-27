@@ -20,9 +20,12 @@
 /*!	\brief	Constructor of class TimeHourMinControl
  *		\details	Actually, it just call the constructor of GeneralHourMinControl
  */
-TimeHourMinControl::TimeHourMinControl( BRect frame, const char* name, const BString& label )
+TimeHourMinControl::TimeHourMinControl( BRect frame,
+													 const char* name,
+													 const BString& label,
+													 BMessage* message )
 	:
-	GeneralHourMinControl( frame, name, label, BString( "PM" ) )
+	GeneralHourMinControl( frame, name, label, BString( "PM" ), message )
 {
 	// We need to find out if the user uses 24 hours clock
 	TimePreferences* time_preferences =	pref_GetTimePreferences();

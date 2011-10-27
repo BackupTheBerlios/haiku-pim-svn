@@ -128,6 +128,30 @@ TimePreferencesView::TimePreferencesView( BRect frame )
 		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_LEFT, B_ALIGN_TOP ) );
 	}
 	
+	// Snooze time
+	TimePrefs->GetDefaultSnoozeTime( &time1, &time2 );
+	toSend = new BMessage( kSnoozeTimeChanged );
+	if ( ! toSend ) {
+		/* Panic! */
+		exit( 1 );
+	}
+	this->defaultSnoozeTime = new GeneralHourMinControl( BRect( 0, 0, 1, 1 ),
+																		  "SnoozeTime",
+																		  "By default, snooze to:",
+																		  "",
+																		  toSend );
+	if ( ! this->defaultSnoozeTime ) {
+		/* Panic! */
+		exit( 1 );
+	}
+	this->defaultSnoozeTime->SetCurrentTime( ( unsigned int )time1,
+															 ( unsigned int )time2 );
+	this->defaultSnoozeTime->ResizeToPreferred();
+	if ( ( layoutItem = groupLayout->AddView( this->defaultSnoozeTime ) ) != NULL )
+	{
+		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_LEFT, B_ALIGN_TOP ) );
+	}
+	
 	
 }	// <-- end of constructor for TimePreferencesView
 
@@ -158,7 +182,13 @@ TimePreferencesView::~TimePreferencesView()
 		defaultAppointmentDuration->RemoveSelf();
 		delete defaultAppointmentDuration;
 		defaultAppointmentDuration = NULL;
-	}		
+	}
+	
+	if ( defaultSnoozeTime ) {
+		defaultSnoozeTime->RemoveSelf();
+		delete defaultSnoozeTime;
+		defaultSnoozeTime = NULL;
+	}
 }	// <-- end of destructor	   
 
 
@@ -177,6 +207,7 @@ void		TimePreferencesView::AttachedToWindow()
 	use24hClock->SetTarget( this );
 	defaultAppointmentDuration->SetTarget( this );
 	defaultReminderTime->SetTarget( this );
+	defaultSnoozeTime->SetTarget( this );
 }	// <-- end of function TimePreferencesView::AttachedToWindow()
 
 
@@ -216,6 +247,16 @@ void		TimePreferencesView::MessageReceived( BMessage* in )
 				mins = 0;
 			}
 			prefs->SetDefaultReminderTime( hours, mins );
+			break;
+		
+		case kSnoozeTimeChanged:
+			if ( in->FindInt32( kHoursValueKey.String(), ( int32* )&hours ) != B_OK ) {
+				hours = 0;
+			}
+			if ( in->FindInt32( kMinutesValueKey.String(), ( int32* )&mins ) != B_OK ) {
+				mins = 0;
+			}
+			prefs->SetDefaultSnoozeTime( hours, mins );
 			break;
 		
 		default:

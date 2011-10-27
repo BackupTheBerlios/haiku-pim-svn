@@ -37,51 +37,6 @@ rgb_color todayBackColor = {0, 0, 0x80, 255};
 
 
 /*==========================================================================
-**			IMPLEMENTATION OF CLASS MonthMenu
-**========================================================================*/
-MonthMenu::MonthMenu(const char *name, float width, float height)
-	:
-	BMenu(name, width, height)
-{
-	
-}
-
-MonthMenu::~MonthMenu() {}
-
-
-void MonthMenu::MouseDown(BPoint where) {
-	BMenu::MouseDown(where);
-/*
-	int i=0, limit=this->CountItems();
-	BMenuItem* item = NULL;
-	DayItem* dayItem = NULL;
-	for (; i<limit; ++i) {
-		item = this->ItemAt(i);
-		if (item->Frame().Contains(where)) {
-			break;
-		}		
-	}
-	
-	if ( (item) && (dayItem = dynamic_cast<DayItem*>(item))) {
-		if (dayItem->IsServiceItem()) {
-			bool en = dayItem->IsEnabled();
-			dayItem->SetEnabled(false);
-//			BMenu::MouseDown(where);			
-			dayItem->SetEnabled(en);
-			dayItem->Fire();
-			Track(true);
-			return;
-		}
-	} else {
-		BMenu::MouseDown(where);
-	}
-*/
-	return;
-}
-
-
-
-/*==========================================================================
 **			IMPLEMENTATION OF CLASS CalendarControl
 **========================================================================*/
 
@@ -93,6 +48,7 @@ void MonthMenu::MouseDown(BPoint where) {
  *	\param[in]	calModuleName				ID of the calendar module used.
  *	\param[in]	initialTime					The initial time to be set, passed in seconds.
  *													If 0, current time is set.
+ *	\param[in]	toSend						Message sent when the control's value is changed.
  *	\attention		It's assumed that calendar modules were already initialized prior
  *						to calling this function.
  */
@@ -100,9 +56,10 @@ CalendarControl::CalendarControl(BRect frame,
 								 const char* name,
 								 const BString& labelInForCalendar,
 								 const BString& calModuleName,
-								 time_t	initialTime )
+								 time_t	initialTime,
+								 BMessage* toSend )
 	:
-	BView( frame, name, 
+	BControl( frame, name, labelInForCalendar.String(), toSend,
 			 B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP_BOTTOM,
 			 B_NAVIGABLE | B_WILL_DRAW | B_FRAME_EVENTS ),
 	fLabel(NULL),
@@ -176,9 +133,9 @@ CalendarControl::CalendarControl(BRect frame,
 		fLastError = B_NO_MEMORY;
 		return; 
 	}
-	lay->SetInsets(0, 0, 0, 0);
+	lay->SetInsets(0, 5, 0, 0);
 	lay->SetSpacing( 10, 5 );
-	BView::SetLayout(lay);
+	this->SetLayout(lay);
 	
 	BLayoutItem* layoutItem;
 	BSize size1;
@@ -238,7 +195,7 @@ void CalendarControl::AttachedToWindow() {
 		SetViewColor( Parent()->ViewColor() );
 	}
 	// Attach to window both current view and all of its children
-	BView::AttachedToWindow();
+	BControl::AttachedToWindow();
 	
 	// This view should respond to the messages - thus the Looper must know it
 	BLooper* looper = ( BLooper* )Looper();
@@ -265,6 +222,28 @@ void CalendarControl::AttachedToWindow() {
 }
 // <-- end of function CalendarControl::AttachedToWindow
 
+
+/*!	\brief		Set CalendarControl to a selected date.
+ */
+void		CalendarControl::InitTimeRepresentation( const TimeRepresentation& trIn ) {
+	if ( fRepresentedTime.GetCalendarModule() == trIn.GetCalendarModule() ) {
+		this->fRepresentedTime = trIn;
+	}
+	else
+	{
+		CalendarModule* cm = utl_FindCalendarModule( trIn.GetCalendarModule() );
+		if ( !cm ) {
+			return;
+		}
+		fCalModule = cm;
+		fRepresentedTime.SetCalendarModule( trIn.GetCalendarModule() );
+		fRepresentedTime = trIn;
+	}
+	
+	CreateMenu();
+} 
+
+
  
 /*!	\brief			Initializes the CalendarControl to default date, separator and order.
  *		\param[in]	initialSeconds		The moment of time this control initially represents
@@ -280,6 +259,7 @@ void CalendarControl::InitTimeRepresentation( time_t initialSeconds ) {
 	this->fRepresentedTime.SetCalendarModule( fCalModule->Identify() );
 
 	CreateMenu();
+	UpdateText();
 }
 // <-- end of function CalendarControl::Init
 
@@ -383,6 +363,15 @@ BString CalendarControl::BuildDateRepresentationString( bool useLongMonthNames )
  */
 CalendarControl::~CalendarControl(void)
 {
+	if (!fDateSelector ) {
+		BMenuItem* item;
+		while ( fDateSelector->CountItems() > 0 ) {
+			item = fDateSelector->RemoveItem( ( int32 )0 );
+			delete item;
+		}
+		fDateSelector->RemoveSelf();
+		delete fDateSelector;
+	}
 	if (!fMenuBar) {
 		RemoveChild(fMenuBar);
 		delete fMenuBar;
@@ -417,8 +406,6 @@ void CalendarControl::CreateMenu( void ) {
 	BPoint	topLeftCorner( 0, 0 );
 	BSize	rectSize;
 	BString sb;
-	float widthOfTheWeekRows = 0;
-	float widthOfFirstRow = 0;
 	
 	// Which month shall we represent?
 	map<int, BString> dayNames = fCalModule->GetDayNamesForLocalYearMonth(
@@ -457,15 +444,17 @@ void CalendarControl::CreateMenu( void ) {
 	
 	int firstDayOfMonthInFirstWeek =
 		(firstDayOfMonthWD + daysInWeek - firstDayOfWeek) % daysInWeek;
-		
-	float numberOfWeeksRequiredFL = 1 + 
-		( ( float )( daysInMonth - ( daysInWeek - firstDayOfMonthInFirstWeek ) )
-			/ daysInWeek );
-	  
-	int numberOfWeeksRequired = floorf( numberOfWeeksRequiredFL + 0.5 );
 	
 	// This is the menu we're adding items to.
-	fDateSelector = new BMenu("⇩", B_ITEMS_IN_MATRIX );	
+	if ( fDateSelector ) {
+		BMenuItem* item = NULL;
+		while ( fDateSelector->ItemAt( 0 ) ) {
+			item = fDateSelector->RemoveItem( ( int32 )0 );
+			delete item;
+		}
+	} else {
+		fDateSelector = new BMenu("⇩", B_ITEMS_IN_MATRIX );
+	}
 	// Sanity check
 	if ( !fDateSelector )
 	{
@@ -885,7 +874,6 @@ BPopUpMenu* CalendarControl::CreateYearsMenu( int yearIn )
  */
 void CalendarControl::UpdateTargets( BMenu* menuIn )
 {
-	BMenu* menu = NULL;
 	BMenuItem* item = NULL;
 	int i, limit;
 	
@@ -923,22 +911,18 @@ void CalendarControl::MessageReceived(BMessage* in) {
 	int8 month;
 	int year;
 	BMessage reply(B_REPLY);
-	time_t currentTime = 0;
 
 	if (!in) { return; }	// Sanity check
 
 	BString sb;
 	
 	if ( !fCalModule ) {
-		return BView::MessageReceived( in );
+		return BControl::MessageReceived( in );
 	}
 	map<int, DoubleNames> monthNames = fCalModule->GetMonthNamesForLocalYear(
 			this->fRepresentedTime.tm_year);
 	map<int, BString> dayNames;
-	BMenuItem* item = NULL;
 	DayItem* dayItem1 = NULL;
-	BMenu* menu = NULL;
-	BMessage* mes = NULL;
 	BPoint point;
 	uint32 command = in->what;
 	bool changePerformed = false;
@@ -951,7 +935,7 @@ void CalendarControl::MessageReceived(BMessage* in) {
 			this->fRepresentedTime.tm_mon = month;
 			UpdateText();
 			fMenuBar->RemoveItem( fDateSelector );
-			delete fDateSelector;
+//			delete fDateSelector;
 			CreateMenu();
 			fMenuBar->AddItem( fDateSelector );
 			UpdateTargets( fDateSelector );
@@ -991,7 +975,7 @@ void CalendarControl::MessageReceived(BMessage* in) {
 			dayNames = fCalModule->GetDayNamesForLocalYearMonth(
 				this->fRepresentedTime.tm_year,
 				this->fRepresentedTime.tm_mon);
-			if ( fRepresentedTime.tm_mday > dayNames.size() )
+			if ( ( unsigned int )fRepresentedTime.tm_mday > dayNames.size() )
 			{
 				fRepresentedTime.tm_mday = dayNames.size();	
 			}
@@ -1004,7 +988,7 @@ void CalendarControl::MessageReceived(BMessage* in) {
 			this->fRepresentedTime = fCalModule->FromTimeTToLocalCalendar( time( NULL ) );			
 			UpdateText();
 			fMenuBar->RemoveItem(fDateSelector);
-			delete fDateSelector;
+//			delete fDateSelector;
 			CreateMenu();
 			fMenuBar->AddItem( fDateSelector );
 			UpdateTargets( fDateSelector );
@@ -1028,13 +1012,13 @@ void CalendarControl::MessageReceived(BMessage* in) {
 			dayNames = fCalModule->GetDayNamesForLocalYearMonth(
 				this->fRepresentedTime.tm_year,
 				this->fRepresentedTime.tm_mon);
-			if (fRepresentedTime.tm_mday > dayNames.size()) {
+			if ( ( unsigned int )fRepresentedTime.tm_mday > dayNames.size() ) {
 				fRepresentedTime.tm_mday = dayNames.size();	
 			}
 			UpdateText();
 //			UpdateYearsMenu(prevYear, fRepresentedTime.tm_year);
 			fMenuBar->RemoveItem(fDateSelector);
-			delete fDateSelector;
+//			delete fDateSelector;
 			CreateMenu();
 			fMenuBar->AddItem(fDateSelector);
 			UpdateTargets(fDateSelector);
@@ -1057,7 +1041,7 @@ void CalendarControl::MessageReceived(BMessage* in) {
 				}
 			} else {
 				++fRepresentedTime.tm_mon;
-				if (fRepresentedTime.tm_mon > monthNames.size() ) {
+				if ( ( unsigned int )fRepresentedTime.tm_mon > monthNames.size() ) {
 					changePerformed = true;
 					fRepresentedTime.tm_mon = 1;
 					prevYear = fRepresentedTime.tm_year;
@@ -1070,25 +1054,23 @@ void CalendarControl::MessageReceived(BMessage* in) {
 			dayNames = fCalModule->GetDayNamesForLocalYearMonth(
 				this->fRepresentedTime.tm_year,
 				this->fRepresentedTime.tm_mon);
-			if (fRepresentedTime.tm_mday > dayNames.size()) {
+			if ( ( unsigned int )fRepresentedTime.tm_mday > dayNames.size() ) {
 				fRepresentedTime.tm_mday = dayNames.size();	
 			}
 			UpdateText();
 			fMenuBar->RemoveItem(fDateSelector);
-			delete fDateSelector;
+//			delete fDateSelector;
 			CreateMenu();
 			fMenuBar->AddItem(fDateSelector);
 			UpdateTargets(fDateSelector);
 			return;
 			break;
-		case (kOpenDateSelector):	
-			
-		default:
-			BView::MessageReceived(in);
-	}
-//	in->SendReply(&reply);
 
-	BView::MessageReceived(in);
+		default:
+			break;
+	}
+
+	BControl::MessageReceived(in);
 }
 // <-- end of function CalendarControl::MessageReceived
 
@@ -1142,3 +1124,45 @@ void CalendarControl::SetEnabled( bool toSet ) {
 
 
 
+/*!	\brief		Send the invocation message.
+ */
+status_t		CalendarControl::Invoke( BMessage* in )
+{
+	BMessage* toSend = NULL, *tempMessage = in;
+	if ( tempMessage == NULL ) {
+		tempMessage = this->Message();
+		if ( !tempMessage ) {
+			return B_BAD_VALUE;
+		}
+	}
+	
+	toSend = new BMessage( tempMessage->what );
+	if ( !toSend ) {
+		return B_NO_MEMORY;
+	}
+	
+	toSend->AddInt64( "when", system_time() );
+	toSend->AddPointer( "source", this );
+	toSend->AddInt32( "Day", ( int32 )fRepresentedTime.tm_mday );
+	toSend->AddInt32( "Month", ( int32 )fRepresentedTime.tm_mon );
+	toSend->AddInt32( "Year", ( int32 )fRepresentedTime.tm_year );
+	
+	status_t toReturn = BControl::Invoke( toSend );
+	
+	delete toSend;
+	return toReturn;
+	
+}	// <-- end of function CalendarControl::Invoke
+
+
+
+/*!	\brief		Change label of the displayed calendar
+ *		\param[in]	label		The new label to be set
+ */
+void		CalendarControl::SetLabel( const char* label ) {
+	if ( !label ) { return; }
+	
+	fLabel->SetText( label );
+	
+	BControl::SetLabel( label );	
+}	// <-- end of function CalendarControl::SetLabel

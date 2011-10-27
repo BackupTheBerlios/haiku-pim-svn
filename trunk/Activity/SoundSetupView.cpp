@@ -16,6 +16,7 @@
 #include <InterfaceDefs.h>
 #include <LayoutItem.h>
 #include <Looper.h>
+#include <StorageDefs.h>
 
 
 /*---------------------------------------------------------------------------
@@ -32,7 +33,8 @@ const uint32		kSoundActivityFileChosen				= 'SAFC';
  *--------------------------------------------------------------------------*/
 
 const rgb_color	kEnabledTextColor			= ui_color( B_CONTROL_TEXT_COLOR );
-const rgb_color	kDisabledTextColor		= { 108, 108, 108, 255 };
+const rgb_color	kDisabledTextColor		= tint_color( ui_color( B_PANEL_BACKGROUND_COLOR ),
+																		  B_DISABLED_LABEL_TINT );
 
 
 
@@ -46,14 +48,33 @@ bool	SoundFileFilter::Filter( const entry_ref *ref,
 {
 	BString fileType( filetype );
 	BDirectory testDir( ref );
-	
+	BEntry		tempEntry;
+	BNode			tempNode;
+	char			buffer[ B_MIME_TYPE_LENGTH ];
+
+	// All directories are allowed - else the user won't be able to travel
 	if ( testDir.InitCheck() == B_OK ) {
 		return true;
 	}
 	
+	// All audio files are allowed
 	if ( fileType.IFindFirst( "audio/" ) == 0 ) {
 		return true;
 	}
+	
+	// Symlinks are traversed and allowed only if they point to audio file
+	while ( fileType.IFindFirst( "application/x-vnd.Be-symlink" ) == 0 )
+	{
+		if ( ( B_OK == tempEntry.SetTo( ref, true ) ) &&	// Find the entry referenced by symlink
+		     ( B_OK == tempNode.SetTo( &tempEntry ) ) &&	// Access the attributes (needed to read file type)
+		     ( 0 != tempNode.ReadAttr( "BEOS:TYPE", B_STRING_TYPE, 0, buffer, 255 ) ) &&
+		     ( NULL != fileType.SetTo( buffer ) ) &&		// This check is really unnecessary
+		     ( fileType.IFindFirst( "audio/" ) == 0 ) )
+	   {
+			return true;
+	   }
+	}
+	
 	return false;
 }	// <-- end of function SoundFileFilter::Filter
 
@@ -66,27 +87,20 @@ bool	SoundFileFilter::Filter( const entry_ref *ref,
  */
 SoundSetupView::SoundSetupView( BRect frame, const char *name, ActivityData* data )
 	:
-	BView( frame, name, B_FOLLOW_ALL_SIDES, B_WILL_DRAW | B_FRAME_EVENTS ),
+	BBox( frame,
+			name,
+			B_FOLLOW_LEFT | B_FOLLOW_TOP,
+			B_WILL_DRAW | B_FRAME_EVENTS ),
 	fData( data ),
 	fLastError( B_OK ),
 	fCheckBox( NULL ),
-	fOutline( NULL ),
 	fLabel( NULL ),
 	fFileName( NULL ),
 	fOpenFilePanel( NULL ),
 	fFilePanel( NULL ),
-	fRefFilter( NULL )
+	fRefFilter( NULL ),
+	fLabelLayoutItem( NULL )
 {
-	// Set the layout for the global view
-	BGroupLayout* groupLayout = new BGroupLayout( B_VERTICAL );
-	if ( !groupLayout ) {
-		/* Panic! */
-		fLastError = B_NO_MEMORY;
-		return;
-	}
-	groupLayout->SetInsets( 5, 5, 5, 5 );
-	this->SetLayout( groupLayout );
-	
 	// Create the enable / disable checkbox
 	BMessage* toSend = new BMessage( kSoundActivityCheckBoxToggled );
 	if ( !toSend ) {
@@ -105,21 +119,7 @@ SoundSetupView::SoundSetupView( BRect frame, const char *name, ActivityData* dat
 		return;
 	}
 	fCheckBox->ResizeToPreferred();
-	
-	// Create the outline
-	fOutline = new BBox( ( this->Bounds() ).InsetBySelf( 5, 5 ),
-								"Sound Setup Outline" );
-	if ( !fOutline ) {
-		/* Panic! */
-		fLastError = B_NO_MEMORY;
-		return;
-	}
-	fOutline->SetLabel( fCheckBox );
-	BLayoutItem* layoutItem = groupLayout->AddView( fOutline );
-	if ( layoutItem ) {
-		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_USE_FULL_WIDTH,
-																	 B_ALIGN_USE_FULL_HEIGHT ) );
-	}
+	BBox::SetLabel( fCheckBox );
 	
 	// Create the internal layout
 	BGridLayout* gridLayout = new BGridLayout();
@@ -130,7 +130,8 @@ SoundSetupView::SoundSetupView( BRect frame, const char *name, ActivityData* dat
 	}
 	gridLayout->SetInsets( 10, ( fCheckBox->Bounds() ).Height(), 10, 10 );
 	gridLayout->SetSpacing( 5, 2 );
-	fOutline->SetLayout( gridLayout );
+	this->SetLayout( gridLayout );
+	gridLayout->SetExplicitAlignment( BAlignment( B_ALIGN_USE_FULL_WIDTH, B_ALIGN_TOP ) );
 	
 	// Create the explanation string
 	fLabel = new BStringView( BRect( 0, 0, 1, 1 ),
@@ -142,9 +143,15 @@ SoundSetupView::SoundSetupView( BRect frame, const char *name, ActivityData* dat
 		return;
 	}
 	fLabel->ResizeToPreferred();
-	layoutItem = gridLayout->AddView( fLabel, 0, 1 );
-	if ( layoutItem ) {
-		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_LEFT, B_ALIGN_MIDDLE ) );
+	BSize size( fLabel->Bounds().Width(), fLabel->Bounds().Height() );
+	BLayoutItem *layoutItem;
+	
+	fLabelLayoutItem = gridLayout->AddView( fLabel, 0, 1, 1, 1 );
+	if ( fLabelLayoutItem ) {
+		fLabelLayoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_LEFT, B_ALIGN_MIDDLE ) );
+		fLabelLayoutItem->SetExplicitMinSize( size );
+		fLabelLayoutItem->SetExplicitPreferredSize( size );
+		gridLayout->SetMinColumnWidth( 0, size.Width() );
 	}
 	
 	// Create the message for button which opens the file panel
@@ -159,16 +166,21 @@ SoundSetupView::SoundSetupView( BRect frame, const char *name, ActivityData* dat
 	fOpenFilePanel = new BButton( BRect( 0, 0, 1, 1 ),
 											"Sound setup open file panel button",
 											"Choose",
-											toSend );
+											toSend,
+											B_FOLLOW_RIGHT | B_FOLLOW_TOP );
 	if ( !fOpenFilePanel ) {
 		/* Panic! */
 		fLastError = B_NO_MEMORY;
 		return;
 	}
 	fOpenFilePanel->ResizeToPreferred();
-	layoutItem = gridLayout->AddView( fOpenFilePanel, 1, 1 );
+	size.Set( fOpenFilePanel->Bounds().Width(), fOpenFilePanel->Bounds().Height() );
+	layoutItem = gridLayout->AddView( fOpenFilePanel, 1, 1, 1, 1 );
 	if ( layoutItem ) {
 		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_RIGHT, B_ALIGN_MIDDLE ) );
+		layoutItem->SetExplicitMaxSize( size );
+		layoutItem->SetExplicitPreferredSize( size );
+		gridLayout->SetMaxColumnWidth( 1, size.Width() );
 	}
 	
 	// Last, create the BStringView with name of currently chosen file.
@@ -184,7 +196,7 @@ SoundSetupView::SoundSetupView( BRect frame, const char *name, ActivityData* dat
 	layoutItem = gridLayout->AddView( fFileName, 0, 2, 2, 1 );
 	if ( layoutItem ) {
 		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_CENTER, B_ALIGN_MIDDLE ) );
-	}	
+	}
 	
 	UpdateInitialValues();
 	fLastError = B_OK;
@@ -199,6 +211,7 @@ void			SoundSetupView::UpdateInitialValues()
 {
 	bool enabled;
 	BString fileName;
+	BDirectory parentDir;
 	
 	if ( fData ) {
 		enabled = fData->GetSound( &fPathToFile );
@@ -216,6 +229,16 @@ void			SoundSetupView::UpdateInitialValues()
 		if ( fPathToDirectory.InitCheck() != B_OK ) {
 			find_directory( B_USER_DIRECTORY, &fPathToDirectory );
 		}
+		
+		// Is the chosen item a file?
+		parentDir.SetTo( fPathToDirectory.Path() );
+		if ( ( parentDir.InitCheck() != B_OK ) ||
+			  !( parentDir.Contains( fileName.String(), B_FILE_NODE ) ) )
+		{
+			fileName.SetTo( "No file" );
+			fData->SetSoundFile( "" );	// Removing invalid path.
+			enabled = false;
+		}
 	}
 	else
 	{
@@ -230,13 +253,12 @@ void			SoundSetupView::UpdateInitialValues()
 	fFileName->SetText( fileName.String() );
 	
 	if ( enabled ) {
-		fCheckBox->SetValue( 1 );
-		fFileName->SetHighColor( kEnabledTextColor );
+		fCheckBox->SetValue( 1 );	// Disabling the control.
+		ToggleCheckBox( true );	// Totally disabling the control.
 		// No need to correct colors - other UI elements still weren't touched.
 	} else {
 		fCheckBox->SetValue( 0 );
-		fFileName->SetHighColor( kDisabledTextColor );
-		fOpenFilePanel->SetEnabled( false );
+		ToggleCheckBox( false );	// Totally disabling the control.
 	}
 	
 	// Create the reference filter
@@ -257,11 +279,6 @@ void			SoundSetupView::UpdateInitialValues()
  */
 SoundSetupView::~SoundSetupView() {
 	
-	if ( fOutline ) {
-		fOutline->RemoveSelf();
-		delete fOutline;
-	}
-	
 	if ( fFilePanel ) {
 		delete fFilePanel;
 	}
@@ -280,7 +297,7 @@ SoundSetupView::~SoundSetupView() {
 /*!	\brief		Add current handler to looper
  */
 void		SoundSetupView::AttachedToWindow() {
-	BView::AttachedToWindow();
+	BBox::AttachedToWindow();
 	if ( this->Parent() ) {
 		this->SetViewColor( this->Parent()->ViewColor() );
 	}
@@ -325,38 +342,12 @@ void 		SoundSetupView::MessageReceived( BMessage* in ) {
 		case kSoundActivityCheckBoxToggled:
 			if ( this->fCheckBox ) {
 				if ( this->fCheckBox->Value() != 0 ) {
-					
-					// UI changes
-					if ( this->fOpenFilePanel ) {
-						fOpenFilePanel->SetEnabled( true );
-					}
-					if ( this->fFileName ) {
-						this->fFileName->SetHighColor( kEnabledTextColor );
-						this->fFileName->Invalidate();
-					}
-					
-					// Saved activity changes
-					if ( fData ) {
-						fData->SetSound( true );
-					}
-				}
-				else
-				{
-					// UI changes
-					if ( this->fOpenFilePanel ) {
-						fOpenFilePanel->SetEnabled( false );
-					}
-					if ( this->fFileName ) {
-						fFileName->SetHighColor( kDisabledTextColor );
-						this->fFileName->Invalidate();
-					}
-					
-					// Saved ativity changes
-					if ( fData ) {
-						fData->SetSound( false );
-					}
+					ToggleCheckBox( true );
+				} else {
+					ToggleCheckBox( false );
 				}
 			}
+					
 			break;
 			
 		case kSoundActivityStartFileSearch:
@@ -396,7 +387,7 @@ void 		SoundSetupView::MessageReceived( BMessage* in ) {
 			
 		case B_CANCEL:		// Intentional fall-through
 		default:
-			BView::MessageReceived( in );
+			BBox::MessageReceived( in );
 	};	
 }	// <-- end of function SoundSetupView::MessageReceived
 
@@ -430,4 +421,78 @@ status_t		SoundSetupView::CreateAndShowFilePanel()
 	fFilePanel->Show();
 	
 	return B_OK;
-}	// <-- end of function "CreateAndShowFilePanel"
+}	// <-- end of function "SoundSetupView::CreateAndShowFilePanel"
+
+
+
+/*!	\brief		When the view is resized, we need to re-arrange the items in it.
+ */
+void		SoundSetupView::FrameResized( float width, float height )
+{
+	BBox::FrameResized( width, height );
+	
+	if ( fLabel ) {
+		BRect labelRect = fLabel->Bounds();
+		BSize size;
+		size.SetHeight( labelRect.Height() );
+		if ( fOpenFilePanel ) {
+			size.SetWidth( width - ( 2 * 10 ) - 10 - fOpenFilePanel->Bounds().Width() );
+		} else {
+			size.SetWidth( width - ( 2 * 10 ) );
+		}
+		if ( fLabelLayoutItem ) {
+			fLabelLayoutItem->SetExplicitMinSize( size );
+			fLabelLayoutItem->SetExplicitPreferredSize( size );
+		}
+	}
+	Relayout();
+	Invalidate();
+	if ( Window() ) {
+		Window()->UpdateIfNeeded();
+	}
+	if ( fOpenFilePanel ) {
+		fOpenFilePanel->Invalidate();
+	}
+}	// <-- end of SoundSetupView::FrameResized
+
+
+
+/*!	\brief		This function should be called when a user - or code - toggles checkbox.
+ *		\param[in]	enabled		\c true	if the control should be enabled
+ *										\c false	otherwise.
+ */
+void		SoundSetupView::ToggleCheckBox( bool enable )
+{
+	if ( enable ) {
+		
+		// UI changes
+		if ( this->fOpenFilePanel ) {
+			fOpenFilePanel->SetEnabled( true );
+		}
+		if ( this->fFileName ) {
+			this->fFileName->SetHighColor( kEnabledTextColor );
+			this->fFileName->Invalidate();
+		}
+		
+		// Saved activity changes
+		if ( fData ) {
+			fData->SetSound( true );
+		}
+	}
+	else
+	{
+		// UI changes
+		if ( this->fOpenFilePanel ) {
+			fOpenFilePanel->SetEnabled( false );
+		}
+		if ( this->fFileName ) {
+			fFileName->SetHighColor( kDisabledTextColor );
+			this->fFileName->Invalidate();
+		}
+		
+		// Saved ativity changes
+		if ( fData ) {
+			fData->SetSound( false );
+		}
+	}
+}	// <-- end of SoundSetupView::ToggleCheckBox

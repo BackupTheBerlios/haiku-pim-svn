@@ -96,3 +96,5 @@ LINKER_FLAGS =
 ## include the makefile-engine
 include /boot/develop/etc/makefile-engine
 
+copy:
+	cp objects.x86-gcc4-release/lib*.so ../lib

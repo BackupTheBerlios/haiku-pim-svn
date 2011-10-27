@@ -9,6 +9,7 @@
 #include <Box.h>
 #include <CheckBox.h>
 #include <Control.h>
+#include <LayoutItem.h>
 #include <Message.h>
 #include <Rect.h>
 #include <ScrollView.h>
@@ -40,34 +41,42 @@ const uint32	kNotificationActivityCheckBoxToggled		= 'ChBT';
  */
 class	NotificationView
 	:
-	public BControl
+	public BBox
 {
 	public:
 		NotificationView( BRect frame, 
 								const char* name,
 								const char* label,
-								ActivityData* toEdit,
-								BMessage* message = NULL );
+								ActivityData* toEdit );
 		~NotificationView();
 
 		virtual void	MessageReceived( BMessage* in );
 		virtual void	AttachedToWindow( void );
 		inline virtual status_t	InitCheck( void ) const { return fLastError; }
-		virtual void	SetLabel( const char* labelIn );
+		inline virtual void		SetLabel( const char* labelIn );
+			
+		virtual void	GetPreferredSize( float* width, float* height );
+		virtual void	FrameResized( float width, float height );
 		virtual void	Pulse( void );
 	
 	protected:
 		// Information holders
 		ActivityData*	fData;
 		BString			fNotificationText;
+		BString			fLabelText;
 		status_t			fLastError;
 
 		// UI elements
 		BCheckBox*		fCheckBox;
-		BBox*				fOutline;
 		BStringView*	fLabel;
 		BTextView*		fTextView;
 		BScrollView*	fScroller;
+		
+		BLayoutItem*	fLabelLayoutItem;
+		BLayoutItem*	fTextViewLayoutItem;
+		
+		// Service functions
+		virtual void	EnableTextView( bool enabled );
 
 };	// <-- end of class NotificationView
 

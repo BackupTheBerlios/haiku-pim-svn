@@ -26,6 +26,7 @@
 
 // Project includes
 #include "Utilities.h"
+#include "CalendarModule.h"
 
 /*---------------------------------------------------------------------------------
  *			Applications' signatures and MIME types section
@@ -273,24 +274,28 @@ BMessage global_Preferences( kGlobalPreferences );
 /*!	\brief		This array is the array of the defined attributes.
  */
 struct DefaultAttribute AttributesArray[] = {
-	// internalName				humanReadable		type					public	editable	indexed		width
-	{	"EVNT:name",				"Event name",		B_STRING_TYPE,		true,		true,		true,			120	},
-	{	"EVNT:category",			"Category",			B_STRING_TYPE,		true,		false,	true,			120	},
-	{	"EVNT:where",				"Location",			B_STRING_TYPE,		true,		true,		true,			120	},
-	{	"EVNT:private",			"Private",			B_INT32_TYPE,		false,	false,	false,		0		},
-//	{	"EVNT:start_seconds",	"Start seconds",	B_UINT64_TYPE,		false,	false,	true			0	},
-	{	"EVNT:duration",			"Duration",			B_INT32_TYPE,		true,		false,	true,			50	},
-	{	"EVNT:next_occurrence",	"Next occurrence",B_INT64_TYPE,		false,	false,	true,			0	},
-	{	"EVNT:and_rules",			"Inclusion rules",B_RAW_TYPE,			false,	false,	false,		0	},
-	{	"EVNT:not_rules",			"Exclusion rules",B_RAW_TYPE,			false,	false,	false,		0	},
-	{	"EVNT:start_TR",			"Start time",		B_RAW_TYPE,			false,	false,	false,		0	},
-	{	"EVNT:activity",			"Activity",			B_RAW_TYPE,			false,	false,	false,		0	},
-	{	"EVNT:activity_fired",	"Activity fired",	B_INT32_TYPE,		true,		false,	true,			0	},
-	{	"EVNT:next_reminder",	"Next reminder",	B_INT64_TYPE,		false,	false,	true,			0	},
-	{	"EVNT:reminder",			"Reminder",			B_RAW_TYPE,			false,	false,	false,		0	},
-	{	"EVNT:reminder_fired",	"Reminder fired",	B_INT32_TYPE,		true,		false,	true,			0	},
+	// internalName				humanReadable			type					public	editable	indexed		width
+	{	"EVNT:name",				"Event name",			B_STRING_TYPE,		true,		true,		true,			255	},
+	{	"EVNT:category",			"Category",				B_STRING_TYPE,		true,		false,	true,			255	},
+	{	"EVNT:where",				"Location",				B_STRING_TYPE,		true,		true,		true,			255	},
+	{	"EVNT:private",			"Private",				B_INT32_TYPE,		false,	false,	false,		70		},
+	{	"EVNT:verified",			"Settings verified",	B_INT32_TYPE,		false,	false,	false,		70		},
+	{  "EVNT:whole_day",			"Lasts whole days",	B_INT32_TYPE,		false,	false,	false,		70		},
+	{	"EVNT:type"					"Event type",			B_INT32_TYPE,		false,	false,	false,		70		},
+	{	"EVNT:cal_module",		"Calendar module ID",B_STRING_TYPE,		true,		false,	false,		255	},
+	{	"EVNT:duration",			"Duration",				B_UINT32_TYPE,		true,		false,	true,			50	},
+	{	"EVNT:next_occurrence",	"Next occurrence",	B_UINT64_TYPE,		false,	false,	true,			70	},
+	{	"EVNT:and_rules",			"Inclusion rules",	B_RAW_TYPE,			false,	false,	false,		70	},
+	{	"EVNT:not_rules",			"Exclusion rules",	B_RAW_TYPE,			false,	false,	false,		70	},
+	{	"EVNT:start_TR",			"Start time",			B_RAW_TYPE,			false,	false,	false,		70	},
+	{	"EVNT:event_activity",	"Event Activity",		B_RAW_TYPE,			false,	false,	false,		70	},
+	{	"EVNT:activity_fired",	"Activity fired",		B_INT32_TYPE,		true,		false,	true,			70	},
+	{	"EVNT:reminder_offset",	"Reminder offset",	B_UINT32_TYPE,		true,		false,	false,		70 },
+	{	"EVNT:next_reminder",	"Next reminder",		B_UINT64_TYPE,		false,	false,	true,			70	},
+	{	"EVNT:reminder_activity","Reminder Acitivty",B_RAW_TYPE,			false,	false,	false,		70	},
+	{	"EVNT:reminder_fired",	"Reminder fired",		B_INT32_TYPE,		true,		false,	true,			70	},
 	
-	{	NULL,							NULL,					B_ANY_TYPE,			false,	false,	false,		0	}
+	{	NULL,							NULL,						B_ANY_TYPE,			false,	false,	false,		0	}
 };	// <-- end of AttributesArray
  	
 

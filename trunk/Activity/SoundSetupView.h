@@ -52,7 +52,7 @@ class SoundFileFilter
  */
 class SoundSetupView
 	:
-	public BView
+	public BBox
 {
 public:
 	SoundSetupView( BRect frame, const char* name, ActivityData* data );
@@ -60,6 +60,7 @@ public:
 	
 	virtual void AttachedToWindow();
 	virtual void MessageReceived( BMessage* in );
+	virtual void FrameResized( float width, float height );
 	
 	/*!	\brief	If this function doesn't return B_OK, last action failed. */
 	inline virtual status_t	InitCheck() const { return fLastError; }
@@ -73,7 +74,6 @@ protected:
 
 	// UI elements
 	BCheckBox*		fCheckBox;
-	BBox* 			fOutline;
 	BStringView*	fLabel;
 	BStringView* 	fFileName;
 	BButton*			fOpenFilePanel;
@@ -81,9 +81,12 @@ protected:
 	BRefFilter*		fRefFilter;
 	BMessenger*		fThisMessenger;
 	
+	BLayoutItem*	fLabelLayoutItem;
+	
 	// Service routines
 	virtual void		UpdateInitialValues( void );
 	virtual status_t	CreateAndShowFilePanel( void );
+	virtual void		ToggleCheckBox( bool enable );
 
 };	// <-- end of class SoundSetupView
 

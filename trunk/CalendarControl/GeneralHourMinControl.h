@@ -8,6 +8,7 @@
 // System includes
 #include <CheckBox.h>
 #include <Control.h>
+#include <LayoutItem.h>
 #include <Menu.h>
 #include <MenuBar.h>
 #include <Message.h>
@@ -141,6 +142,10 @@ class GeneralHourMinControl
 		BMenu				*fHoursMenu;
 		BMenu				*fMinutesMenu;
 		BCheckBox		*fCheckBox;
+		
+		BLayoutItem*	fLabelItem;
+		BLayoutItem*	fMenuBarItem;
+		BLayoutItem*	fCheckBoxItem;
 		
 		// Internal functions
 		virtual void			InitUI( void );

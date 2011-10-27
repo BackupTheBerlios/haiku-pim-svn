@@ -1,20 +1,25 @@
 #ifndef	__TIME_REPRESENTATION_H__
 #define __TIME_REPRESENTATION_H__
 
-#include <support/String.h>
-#include <support/List.h>
-#include <posix/time.h>
-#include <posix/string.h>
+// OS includes
+#include <Message.h>
+#include <String.h>
+#include <List.h>
+
+// POSIX includes
+#include <time.h>
+#include <string.h>
 #include <stdlib.h>
 
 using namespace std;
 
 extern BList listOfCalendarModules;
 
-/*! \enum	WEEKDAYS
+/*! 
 	\brief	The Calendar Module allows to check what day of week is a local date.
 	\details	Used also in the Rule for defining a weekly repeating pattern.
 */
+
 const uint32	kSunday		= 1;
 const uint32	kMonday		= 2;
 const uint32	kTuesday	= 3;
@@ -28,10 +33,11 @@ const uint32	k10thDay	= 10;
 const uint32	k7DaysWeek	= 20;
 const uint32	kInvalid	= 0xFF;
 
-// #include "CalendarModule.h"
+
+
 class CalendarModule;
 
-/*! \class	TimeRepresentation
+/*!
 	\brief	This class is an expansion of the struct tm.
 
 	\details	TimeRepresentation is an extention of struct tm. However, since the TimeRepresentation
@@ -58,6 +64,8 @@ public:
 
 	virtual const tm GetRepresentedTime (void) const ;
 	
+	void Archive( BMessage* in );
+	void Unarchive( BMessage* in );
 
 	// Operators
 	virtual TimeRepresentation& operator= (const TimeRepresentation& in);

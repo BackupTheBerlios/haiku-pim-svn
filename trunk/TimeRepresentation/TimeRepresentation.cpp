@@ -5,7 +5,7 @@
 
 BList listOfCalendarModules;
 
-/*! \function		TimeRepresentation
+/*! 
  *	\brief			Constructor from struct tm and BString for calendar module name.
  *	\details		It is a really bad practice to construct a TimeRepresentation
  *					object without explicitly referencing a CalendarModule.
@@ -52,7 +52,7 @@ TimeRepresentation::TimeRepresentation(struct tm& in, BString calModule ) {
 }
 // <-- end of constructor of TimeRepresentation
 
-/*!	\function		TimeRepresentation
+/*!	
  *	\brief			Empty constructor.
  */
 TimeRepresentation::TimeRepresentation() {
@@ -64,7 +64,7 @@ TimeRepresentation::TimeRepresentation() {
 }
 // <-- end of empty constructor of TimeRepresentation
 
-/*! \function		TimeRepresentation
+/*! 
  *	\brief			Copy constructor
  *	\param[in]	in	Reference to TimeRepresentation from which the copy should be performed.
  *	\remarks		The created copy is deep copy. The time zone is created anew.
@@ -94,7 +94,7 @@ TimeRepresentation::TimeRepresentation(const TimeRepresentation &in) {
 }
 // <-- end of copy constructor of TimeRepresentation
 
-/*!	\function		TimeRepresentation::GetRepresentedTime
+/*!	
  *	\brief			Returns the time represetned by the TimeRepresentation.
  *	\details		The created representation is a deep copy. That is, the
  *					tm_zone string is cloned. All other fields are copied
@@ -137,7 +137,7 @@ const tm TimeRepresentation::GetRepresentedTime() const {
 }
 // <-- end of function TimeRepresentation::GetRepresentedTime
 
-/*! \function		TimeRepresentation::~TimeRepresentation
+/*! 
  *	\brief			Default destructor of the TimeRepresentation
  *	\details		Recycles the memory for the dynamically allocated
  *					element of the structure - the time zone name. Also,
@@ -153,7 +153,7 @@ TimeRepresentation::~TimeRepresentation() {
 }
 // <-- end of destructor of TimeRepresentation
 
-/*! \function		Assignment operator
+/*! 
  *	\brief			Duh?
  *	\param[in]	in	The value to which the assignment should be performed.
  *	\returns		Reference to the object overgone assignment.
@@ -187,7 +187,7 @@ TimeRepresentation& TimeRepresentation::operator=(const TimeRepresentation &in) 
 }
 // <-- end of TimeRepresentation::operator=
 
-/*!	\function		Comparison operator
+/*!	
  *	\brief			Allows field-by-field comparison of two TimeRepresentations
  *	\param[in]	in	The TimeRepresentation object to be compared with.
  *	\returns		true if the objects are equal, else false.
@@ -216,7 +216,7 @@ bool TimeRepresentation::operator== (const TimeRepresentation& in) const {
 }
 // <-- end of TimeRepresentation::operator==
 
-/*! \function		TimeRepresentation::operator+
+/*! 
  *	\brief			Sums two dates
  *	\details		 
  *	\param[in]	op		Const reference to the second operand
@@ -239,7 +239,7 @@ TimeRepresentation TimeRepresentation::operator+ (const TimeRepresentation &op)
 }
 // <-- end of function TimeRepresentation::operator+
 
- *! \function		TimeRepresentation::operator+=
+ *! 
  *	\brief			Sums two dates and put the result into "this"
  *	\details		
  *	\param[in]	in		Const reference to the date to be added 
@@ -305,7 +305,7 @@ TimeRepresentation& TimeRepresentation::operator+= (const TimeRepresentation &in
 
 */
 
-/*!	\function	TimeRepresentation::operator<
+/*!	
  *	\brief		Comparing two TimeRepresentation objects.
  *	\remarks	The objects must be of the same CalendarModule!
  */
@@ -320,3 +320,56 @@ bool TimeRepresentation::operator<(const TimeRepresentation& in) const {
 	return (time1<time2);
 }
 // <-- end of TimeRepresentation::operator<
+
+
+/*!	\brief 		Archiving into a BMessage
+ *		\param[in]	in		The BMessage to archive into.
+ */
+void		TimeRepresentation::Archive( BMessage* in )
+{
+	if ( !in ) { return; }
+	
+	in->MakeEmpty();
+	
+	in->AddString( "Calendar Module", fCalendarModule );
+	in->AddBool( "Representing Real Date", fIsRepresentingRealDate );
+	
+	in->AddInt32( "Year", ( int32 )tm_year );
+	in->AddInt32( "Month", ( int32 )tm_mon );
+	in->AddInt32( "Day", ( int32 )tm_mday );
+	in->AddInt32( "Hour", ( int32 )tm_hour );
+	in->AddInt32( "Min", ( int32 )tm_min );
+	in->AddInt32( "Sec", ( int32 )tm_sec );
+	in->AddInt32( "Wday", ( int32 )tm_wday );
+	in->AddInt32( "Yday", ( int32 )tm_yday );
+	in->AddInt32( "IsDST", ( int32 )tm_isdst );
+	in->AddInt32( "GMToff", ( int32 )tm_gmtoff );
+	if ( tm_zone != NULL )
+		in->AddString( "TimeZone", tm_zone );
+}	// <-- end of function TimeRepresentation::Archive
+
+
+
+/*!	\brief		Unarchiving from BMessage
+ *		\param[in]	in		The BMessage to instantiate from.
+ */
+void		TimeRepresentation::Unarchive( BMessage* in ) {
+	if ( !in ) { return; }
+	
+	in->FindString( "Calendar Module", &fCalendarModule );
+	in->FindBool( "Representing Real Date", &fIsRepresentingRealDate );
+	
+	in->FindInt32( "Year", ( int32* )&tm_year );
+	in->FindInt32( "Month", ( int32* )&tm_mon );
+	in->FindInt32( "Day", ( int32* )&tm_mday );
+	in->FindInt32( "Hour", ( int32* )&tm_hour );
+	in->FindInt32( "Min", ( int32* )&tm_min );
+	in->FindInt32( "Sec", ( int32* )&tm_sec );
+	in->FindInt32( "Wday", ( int32* )&tm_wday );
+	in->FindInt32( "Yday", ( int32* )&tm_yday );
+	in->FindInt32( "IsDST", ( int32* )&tm_isdst );
+	in->FindInt32( "GMToff", ( int32* )&tm_gmtoff );
+	
+	// Time zones are currently not supported
+	tm_zone = NULL;
+}	// <-- end of function TimeRepresentation::Unarchive

@@ -18,6 +18,8 @@
 #include <LayoutItem.h>
 #include <Looper.h>
 #include <Node.h>
+#include <StorageDefs.h>
+
 
 
 /*---------------------------------------------------------------------------
@@ -36,7 +38,8 @@ const uint32		kProgramActivityFileChosen						= 'PAFC';
  *--------------------------------------------------------------------------*/
 
 const rgb_color	kEnabledTextColor			= ui_color( B_CONTROL_TEXT_COLOR );
-const rgb_color	kDisabledTextColor		= { 108, 108, 108, 255 };
+const rgb_color	kDisabledTextColor		= tint_color( ui_color( B_PANEL_BACKGROUND_COLOR ),
+																		  B_DISABLED_LABEL_TINT );
 
 
 
@@ -52,7 +55,7 @@ bool	ProgramFileFilter::Filter( const entry_ref *ref,
 	BDirectory 	testDir( ref );
 	BEntry		tempEntry;
 	BNode			tempNode;
-	char			buffer[ 255 ];
+	char			buffer[ B_MIME_TYPE_LENGTH ];
 
 	// Allow all directories	
 	if ( testDir.InitCheck() == B_OK ) {
@@ -65,7 +68,7 @@ bool	ProgramFileFilter::Filter( const entry_ref *ref,
 		return true;
 	}
 	
-	if ( fileType.IFindFirst( "application/x-vnd.Be-symlink" ) == 0 )
+	while ( fileType.IFindFirst( "application/x-vnd.Be-symlink" ) == 0 )
 	{
 		if ( ( B_OK == tempEntry.SetTo( ref, true ) ) &&
 		     ( B_OK == tempNode.SetTo( &tempEntry ) ) &&
@@ -89,11 +92,10 @@ bool	ProgramFileFilter::Filter( const entry_ref *ref,
  */
 ProgramSetupView::ProgramSetupView( BRect frame, const char *name, ActivityData* data )
 	:
-	BView( frame, name, B_FOLLOW_ALL_SIDES, B_WILL_DRAW | B_FRAME_EVENTS ),
+	BBox( frame, name, B_FOLLOW_LEFT | B_FOLLOW_TOP, B_WILL_DRAW | B_FRAME_EVENTS ),
 	fData( data ),
 	fLastError( B_OK ),
 	fCheckBox( NULL ),
-	fOutline( NULL ),
 	fLabel( NULL ),
 	fFileName( NULL ),
 	fOpenFilePanel( NULL ),
@@ -132,20 +134,8 @@ ProgramSetupView::ProgramSetupView( BRect frame, const char *name, ActivityData*
 	}
 	fCheckBox->ResizeToPreferred();
 	
-	// Create the outline
-	fOutline = new BBox( ( this->Bounds() ).InsetBySelf( 5, 5 ),
-								"Program Setup Outline" );
-	if ( !fOutline ) {
-		/* Panic! */
-		fLastError = B_NO_MEMORY;
-		return;
-	}
-	fOutline->SetLabel( fCheckBox );
-	BLayoutItem* layoutItem = groupLayout->AddView( fOutline );
-	if ( layoutItem ) {
-		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_USE_FULL_WIDTH,
-																	 B_ALIGN_USE_FULL_HEIGHT ) );
-	}
+	BBox::SetLabel( fCheckBox );
+	BLayoutItem* layoutItem;
 	
 	// Create the internal layout
 	BGridLayout* gridLayout = new BGridLayout();
@@ -157,8 +147,8 @@ ProgramSetupView::ProgramSetupView( BRect frame, const char *name, ActivityData*
 	gridLayout->SetInsets( 10, ( fCheckBox->Bounds() ).Height(), 10, 10 );
 	gridLayout->SetSpacing( 5, 2 );
 	gridLayout->SetExplicitAlignment( BAlignment( B_ALIGN_USE_FULL_WIDTH,
-																 B_ALIGN_USE_FULL_HEIGHT ) );
-	fOutline->SetLayout( gridLayout );
+																 B_ALIGN_TOP ) );
+	this->SetLayout( gridLayout );
 	
 	// Create the explanation string
 	fLabel = new BStringView( BRect( 0, 0, 1, 1 ),
@@ -170,9 +160,13 @@ ProgramSetupView::ProgramSetupView( BRect frame, const char *name, ActivityData*
 		return;
 	}
 	fLabel->ResizeToPreferred();
-	layoutItem = gridLayout->AddView( fLabel, 0, 1 );
-	if ( layoutItem ) {
-		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_LEFT, B_ALIGN_MIDDLE ) );
+	BSize size( fLabel->Bounds().Width(), fLabel->Bounds().Height() );
+	fLabelLayoutItem = gridLayout->AddView( fLabel, 0, 1, 1, 1 );
+	if ( fLabelLayoutItem ) {
+		fLabelLayoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_LEFT, B_ALIGN_MIDDLE ) );
+		fLabelLayoutItem->SetExplicitMinSize( size );
+		fLabelLayoutItem->SetExplicitPreferredSize( size );
+		gridLayout->SetMinColumnWidth( 0, size.Width() );
 	}
 	
 	// Create the message for button which opens the file panel
@@ -194,9 +188,13 @@ ProgramSetupView::ProgramSetupView( BRect frame, const char *name, ActivityData*
 		return;
 	}
 	fOpenFilePanel->ResizeToPreferred();
-	layoutItem = gridLayout->AddView( fOpenFilePanel, 2, 1 );
+	size.Set( fOpenFilePanel->Bounds().Width(), fOpenFilePanel->Bounds().Height() );
+	layoutItem = gridLayout->AddView( fOpenFilePanel, 1, 1, 1, 1 );
 	if ( layoutItem ) {
 		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_RIGHT, B_ALIGN_MIDDLE ) );
+		layoutItem->SetExplicitMaxSize( size );
+		layoutItem->SetExplicitPreferredSize( size );
+		gridLayout->SetMaxColumnWidth( 1, size.Width() );
 	}
 	
 	// Create the BStringView with name of currently chosen file.
@@ -209,7 +207,7 @@ ProgramSetupView::ProgramSetupView( BRect frame, const char *name, ActivityData*
 		return;
 	}
 	fFileName->ResizeToPreferred();
-	layoutItem = gridLayout->AddView( fFileName, 0, 2, 3, 1 );
+	layoutItem = gridLayout->AddView( fFileName, 0, 2, 2, 1 );
 	if ( layoutItem ) {
 		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_CENTER, B_ALIGN_MIDDLE ) );
 	}	
@@ -221,9 +219,9 @@ ProgramSetupView::ProgramSetupView( BRect frame, const char *name, ActivityData*
 		fLastError = B_NO_MEMORY;
 		return;
 	}
-	fCommandLineOptionsInput = new BTextControl( BRect( 0, 0, 1, 1 ),
+	fCommandLineOptionsInput = new BTextControl( BRect( 0, 0, 1, ( this->Bounds().Width() - 10 ) ),
 																"Command line options editor",
-																"Command line params:",
+																"Command line parameters:",
 																NULL,		// Contents will be set later
 																toSend );
 	if ( !fCommandLineOptionsInput ) {
@@ -232,17 +230,19 @@ ProgramSetupView::ProgramSetupView( BRect frame, const char *name, ActivityData*
 		return;
 	}
 	fCommandLineOptionsInput->ResizeToPreferred();
+	size.Set( fCommandLineOptionsInput->Bounds().Width(), fCommandLineOptionsInput->Bounds().Height() );
 	( fCommandLineOptionsInput->TextView() )->SetMaxBytes( ACTIVITY_MAX_ALLOWED_COMMAND_LINE_OPTIONS_LENGTH );
-	layoutItem = gridLayout->AddView( fCommandLineOptionsInput, 0, 3, 3, 1 );
+	layoutItem = gridLayout->AddView( fCommandLineOptionsInput, 0, 3, 2, 1 );
 	if ( layoutItem ) {
 		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_USE_FULL_WIDTH, B_ALIGN_MIDDLE ) );
-	}	
+		layoutItem->SetExplicitMinSize( size );
+		layoutItem->SetExplicitPreferredSize( size );
+	}
+
 
 	UpdateInitialValues();
-	
-	gridLayout->SetColumnWeight( 0, 100 );
-	gridLayout->SetColumnWeight( 1, 1 );
-	
+
+	Relayout();
 	fLastError = B_OK;
 	
 }	// <-- end of constructor for class ProgramSetupView
@@ -255,6 +255,7 @@ void			ProgramSetupView::UpdateInitialValues()
 {
 	bool enabled;
 	BString fileName;
+	BDirectory parentDir;
 	
 	if ( fData ) {
 		enabled = fData->GetProgram( &fPathToFile, &fCommandLineOptions );
@@ -273,6 +274,16 @@ void			ProgramSetupView::UpdateInitialValues()
 		if ( fPathToDirectory.InitCheck() != B_OK ) {
 			find_directory( B_BEOS_BIN_DIRECTORY, &fPathToDirectory );
 		}
+		
+		// Is the chosen item a file?
+		parentDir.SetTo( fPathToDirectory.Path() );
+		if ( ( parentDir.InitCheck() != B_OK ) ||
+			  !( parentDir.Contains( fileName.String(), B_FILE_NODE ) ) )
+		{
+			fileName.SetTo( "No file" );
+			fData->SetProgramPath( "" );	// Removing invalid path.
+			enabled = false;
+		}
 	}
 	else
 	{
@@ -288,14 +299,10 @@ void			ProgramSetupView::UpdateInitialValues()
 	
 	if ( enabled ) {
 		fCheckBox->SetValue( 1 );
-		fCommandLineOptionsInput->SetEnabled( true );
-		fFileName->SetHighColor( kEnabledTextColor );
-		// No need to correct colors - other UI elements still weren't touched.
+		ToggleCheckBox( true );
 	} else {
 		fCheckBox->SetValue( 0 );
-		fFileName->SetHighColor( kDisabledTextColor );
-		fCommandLineOptionsInput->SetEnabled( false );
-		fOpenFilePanel->SetEnabled( false );
+		ToggleCheckBox( false );
 	}
 	
 	// Create the reference filter
@@ -315,11 +322,6 @@ void			ProgramSetupView::UpdateInitialValues()
 /*!	\brief		Destructor for the class ProgramSetupView
  */
 ProgramSetupView::~ProgramSetupView() {
-	
-	if ( fOutline ) {
-		fOutline->RemoveSelf();
-		delete fOutline;
-	}
 	
 	if ( fFilePanel ) {
 		delete fFilePanel;
@@ -343,7 +345,9 @@ ProgramSetupView::~ProgramSetupView() {
 /*!	\brief		Add current handler to looper
  */
 void		ProgramSetupView::AttachedToWindow() {
-	BView::AttachedToWindow();
+	BFont plainFont( be_plain_font );
+	
+	BBox::AttachedToWindow();
 	if ( this->Parent() ) {
 		this->SetViewColor( this->Parent()->ViewColor() );
 	}
@@ -362,6 +366,7 @@ void		ProgramSetupView::AttachedToWindow() {
 	}
 	if ( fCommandLineOptionsInput ) {
 		fCommandLineOptionsInput->SetTarget( this );
+		fCommandLineOptionsInput->SetDivider( plainFont.StringWidth( fCommandLineOptionsInput->Label() ) + 15 );
 	}
 	
 	// This is the first place where we can construct our own BMessenger, since
@@ -392,42 +397,11 @@ void 		ProgramSetupView::MessageReceived( BMessage* in ) {
 		case kProgramActivityCheckBoxToggled:
 			if ( this->fCheckBox ) {
 				if ( this->fCheckBox->Value() != 0 ) {
-					
-					// UI changes
-					if ( this->fOpenFilePanel ) {
-						fOpenFilePanel->SetEnabled( true );
-					}
-					if ( this->fFileName ) {
-						this->fFileName->SetHighColor( kEnabledTextColor );
-						this->fFileName->Invalidate();
-					}
-					if ( this->fCommandLineOptionsInput ) {
-						fCommandLineOptionsInput->SetEnabled( true );
-					}
-					
-					// Saved activity changes
-					if ( fData ) {
-						fData->SetProgram( true );
-					}
+					ToggleCheckBox( true );
 				}
 				else
 				{
-					// UI changes
-					if ( this->fOpenFilePanel ) {
-						fOpenFilePanel->SetEnabled( false );
-					}
-					if ( this->fFileName ) {
-						fFileName->SetHighColor( kDisabledTextColor );
-						this->fFileName->Invalidate();
-					}
-					if ( this->fCommandLineOptionsInput ) {
-						fCommandLineOptionsInput->SetEnabled( false );
-					}
-					
-					// Saved ativity changes
-					if ( fData ) {
-						fData->SetProgram( false );
-					}
+					ToggleCheckBox( false );
 				}
 			}
 			break;
@@ -477,7 +451,7 @@ void 		ProgramSetupView::MessageReceived( BMessage* in ) {
 			
 		case B_CANCEL:		// Intentional fall-through
 		default:
-			BView::MessageReceived( in );
+			BBox::MessageReceived( in );
 	};	
 }	// <-- end of function ProgramSetupView::MessageReceived
 
@@ -514,16 +488,85 @@ status_t		ProgramSetupView::CreateAndShowFilePanel()
 }	// <-- end of function "CreateAndShowFilePanel"
 
 
-
+/*!	\brief			This function is called when the frame is resized.
+ */
 void		ProgramSetupView::FrameResized( float width, float height )
 {
-	BView::FrameResized( width, height );
+	BBox::FrameResized( width, height );
 	
-	if ( fOutline && fOutline->GetLayout() )
-	{
-		( fOutline->GetLayout() )->SetFrame( this->Frame() );
-		this->Invalidate();
-		this->Relayout();
+	BFont plainFont( be_plain_font );
+	
+	if ( fLabel ) {
+		BRect labelRect = fLabel->Bounds();
+		BSize size;
+		size.SetHeight( labelRect.Height() );
+		if ( fOpenFilePanel ) {
+			size.SetWidth( width - ( 2 * 10 ) - 10 - fOpenFilePanel->Bounds().Width() );
+		} else {
+			size.SetWidth( width - ( 2 * 10 ) );
+		}
+		if ( fLabelLayoutItem ) {
+			fLabelLayoutItem->SetExplicitMinSize( size );
+			fLabelLayoutItem->SetExplicitPreferredSize( size );
+		}
+	}
+	if ( fCommandLineOptionsInput ) {
+		fCommandLineOptionsInput->SetDivider( plainFont.StringWidth( fCommandLineOptionsInput->Label() ) + 15 );
+	}
+	Relayout();
+	Invalidate();
+	if ( Window() ) {
+		Window()->UpdateIfNeeded();
+	}
+	if ( fOpenFilePanel ) {
+		fOpenFilePanel->Invalidate();
 	}
 	
-}
+}	// <-- end of function ProgramSetupView::FrameResized
+
+
+
+/*!	\brief		This function should be called when a user - or code - toggles checkbox.
+ *		\param[in]	enabled		\c true	if the control should be enabled
+ *										\c false	otherwise.
+ */
+void		ProgramSetupView::ToggleCheckBox( bool enable )
+{
+	if ( enable ) {
+		
+		// UI changes
+		if ( this->fOpenFilePanel ) {
+			fOpenFilePanel->SetEnabled( true );
+		}
+		if ( this->fFileName ) {
+			this->fFileName->SetHighColor( kEnabledTextColor );
+			this->fFileName->Invalidate();
+		}
+		if ( fCommandLineOptionsInput ) {
+			fCommandLineOptionsInput->SetEnabled( true );
+		}
+		// Saved activity changes
+		if ( fData ) {
+			fData->SetProgram( true );
+		}
+	}
+	else
+	{
+		// UI changes
+		if ( this->fOpenFilePanel ) {
+			fOpenFilePanel->SetEnabled( false );
+		}
+		if ( this->fFileName ) {
+			fFileName->SetHighColor( kDisabledTextColor );
+			this->fFileName->Invalidate();
+		}
+		if ( fCommandLineOptionsInput ) {
+			fCommandLineOptionsInput->SetEnabled( false );
+		}
+		
+		// Saved ativity changes
+		if ( fData ) {
+			fData->SetProgram( false );
+		}
+	}
+}	// <-- end of ProgramSetupView::ToggleCheckBox

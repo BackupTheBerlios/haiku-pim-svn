@@ -153,6 +153,19 @@ TimePreferences::TimePreferences( BMessage* in )
 	}	
 	SetDefaultReminderTime( temp1, temp2 );
 	
+	
+	// Get the default snooze time
+	if ( ( !in ) || B_OK != in->FindInt8( "Default Snooze Time - Hours", ( int8* )&temp1 ) )
+	{
+		temp1 = 0;
+	}
+	
+	if ( ( !in ) || ( B_OK != in->FindInt8( "Default Snooze Time - Minutes", ( int8* )&temp2 ) ) )
+	{
+		temp2 = 10;
+	}	
+	SetDefaultSnoozeTime( temp1, temp2 );
+	
 }	// <-- end of constructor from BMessage
 
 
@@ -171,6 +184,7 @@ TimePreferences	TimePreferences::operator= ( const TimePreferences& other )
 {
 	this->defaultAppointmentDuration = other.defaultAppointmentDuration;
 	this->defaultReminderTime = other.defaultReminderTime;
+	this->defaultSnoozeTime = other.defaultSnoozeTime;
 	this->use24hClock = other.use24hClock;
 
 	return *this;	
@@ -185,12 +199,14 @@ TimePreferences::TimePreferences( const TimePreferences* other )
 	{
 		this->defaultAppointmentDuration = other->defaultAppointmentDuration;
 		this->defaultReminderTime = other->defaultReminderTime;
+		this->defaultSnoozeTime = other->defaultSnoozeTime;
 		this->use24hClock  = other->use24hClock;
 	}
 	else		// Setting default preferences
 	{
 		SetDefaultAppointmentDuration( 0, 30 );
 		SetDefaultReminderTime( 0, 15 );
+		SetDefaultSnoozeTime( 0, 10 );
 		this->use24hClock  = true;
 	}
 }	// <-- end of copy constructor
@@ -240,6 +256,18 @@ status_t		TimePreferences::Archive( BMessage* out ) const
 		status = out->AddInt8( "Default Reminder Time - Minutes", ( uint8 )this->defaultReminderTime.tm_min );
 	}
 
+	// Pack the default snooze time
+	if ( out->HasInt8( "Default Snooze Time - Hours" ) ) {
+		status = out->ReplaceInt8( "Default Snooze Time - Hours", ( uint8 )this->defaultSnoozeTime.tm_hour );
+	} else {
+		status = out->AddInt8( "Default Snooze Time - Hours", ( uint8 )this->defaultSnoozeTime.tm_hour );
+	}
+	if ( out->HasInt8( "Default Snooze Time - Minutes" ) ) {
+		status = out->ReplaceInt8( "Default Snooze Time - Minutes", ( uint8 )this->defaultSnoozeTime.tm_min );
+	} else {
+		status = out->AddInt8( "Default Snooze Time - Minutes", ( uint8 )this->defaultSnoozeTime.tm_min );
+	}
+
 	return status;	
 	
 }	// <-- end of function TimePreferences::Archive
@@ -254,6 +282,10 @@ bool		TimePreferences::operator== ( const TimePreferences& other ) const
 {
 	if ( ( this->defaultAppointmentDuration.tm_min == other.defaultAppointmentDuration.tm_min ) &&
 		  ( this->defaultAppointmentDuration.tm_hour == other.defaultAppointmentDuration.tm_hour ) &&
+		  ( this->defaultReminderTime.tm_hour == other.defaultReminderTime.tm_hour ) &&
+		  ( this->defaultReminderTime.tm_min == other.defaultReminderTime.tm_min ) &&
+		  ( this->defaultSnoozeTime.tm_hour == other.defaultSnoozeTime.tm_hour ) &&
+		  ( this->defaultSnoozeTime.tm_min == other.defaultSnoozeTime.tm_min ) &&
 		  ( this->use24hClock == other.use24hClock ) )
 	{
 		return true;
@@ -271,6 +303,10 @@ bool		TimePreferences::Compare ( const TimePreferences* other ) const
 	if ( ( other ) &&
 		  ( this->defaultAppointmentDuration.tm_min == other->defaultAppointmentDuration.tm_min ) &&
 		  ( this->defaultAppointmentDuration.tm_hour == other->defaultAppointmentDuration.tm_hour ) &&
+		  ( this->defaultReminderTime.tm_hour == other->defaultReminderTime.tm_hour ) &&
+		  ( this->defaultReminderTime.tm_min == other->defaultReminderTime.tm_min ) &&
+		  ( this->defaultSnoozeTime.tm_hour == other->defaultSnoozeTime.tm_hour ) &&
+		  ( this->defaultSnoozeTime.tm_min == other->defaultSnoozeTime.tm_min ) &&
 		  ( this->use24hClock == other->use24hClock ) )
 	{
 		return true;
@@ -305,3 +341,17 @@ void		TimePreferences::SetDefaultReminderTime( int hours, int mins )
 	this->defaultReminderTime.tm_min = mins;
 	this->defaultReminderTime.SetIsRepresentingRealDate( false );	
 }	// <-- end of function TimePreferences::SetDefaultReminderTime
+
+
+
+/*!	\brief		SetDefaultSnoozeTime
+ *		\details		Receives only hours and minutes.
+ *		\param[in]	hours		How many hours should the snooze last?
+ *		\param[in]	mins		How many minutes should the snooze last?
+ */
+void		TimePreferences::SetDefaultSnoozeTime( int hours, int mins )
+{
+	this->defaultSnoozeTime.tm_hour = hours;
+	this->defaultSnoozeTime.tm_min = mins;
+	this->defaultSnoozeTime.SetIsRepresentingRealDate( false );	
+}	// <-- end of function TimePreferences::SetDefaultSnoozeTime

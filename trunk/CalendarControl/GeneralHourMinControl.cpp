@@ -120,20 +120,22 @@ void GeneralHourMinControl::InitUI( void )
 	SetLayout( layout );
 	
 	BLayoutItem *layoutItem;
-	BSize size;
+	BSize size( fLabelView->Bounds().Width(), fLabelView->Bounds().Height() );
 	
-	layoutItem = layout->AddView( 0, fLabelView );
-	if ( layoutItem ) {
-		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_LEFT, B_ALIGN_TOP) );
+	fLabelItem = layout->AddView( 0, fLabelView );
+	if ( fLabelItem ) {
+		fLabelItem->SetExplicitAlignment( BAlignment( B_ALIGN_LEFT, B_ALIGN_TOP) );
+		fLabelItem->SetExplicitMinSize( size );
+		fLabelItem->SetExplicitPreferredSize( size );
 	}
 	
 	size.SetWidth( fSelectorMenuBar->Bounds().Width() );
 	size.SetHeight( fSelectorMenuBar->Bounds().Height() );
-	layoutItem = layout->AddView( 1, fSelectorMenuBar );
-	if ( layoutItem ) {
-		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_RIGHT, B_ALIGN_TOP ) );
-		layoutItem->SetExplicitMaxSize( size );
-		layoutItem->SetExplicitPreferredSize( size );
+	fMenuBarItem = layout->AddView( 1, fSelectorMenuBar );
+	if ( fMenuBarItem ) {
+		fMenuBarItem->SetExplicitAlignment( BAlignment( B_ALIGN_RIGHT, B_ALIGN_TOP ) );
+		fMenuBarItem->SetExplicitMaxSize( size );
+		fMenuBarItem->SetExplicitPreferredSize( size );
 	}
 	
 	if ( this->fCheckBox )
@@ -870,7 +872,7 @@ void		GeneralHourMinControl::SetCheckBoxLabel( const BString& toSet )
 				layoutItem->SetExplicitMaxSize( size );
 				layoutItem->SetExplicitAlignment(BAlignment( B_ALIGN_RIGHT, B_ALIGN_TOP ) );
 			}
-			this->InvalidateLayout();
+			this->Relayout();
 			this->Invalidate();
 			return;
 		}
@@ -899,7 +901,7 @@ void		GeneralHourMinControl::SetCheckBoxLabel( const BString& toSet )
 				layoutItem->SetExplicitMaxSize( size );
 				layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_RIGHT, B_ALIGN_TOP ) );
 			}
-			this->InvalidateLayout();
+			this->Relayout();
 			this->Invalidate();
 			
 			if ( unlockNeeded )
@@ -936,12 +938,24 @@ void			GeneralHourMinControl::SetLabel( const char* in )
  */
 void			GeneralHourMinControl::SetLabel( const BString& in )
 {
+	BSize size;
 	this->fLabel.SetTo( in );
 	if ( this->fLabelView )
 	{
 		this->fLabelView->SetText( in.String() );
+		fLabelView->ResizeToPreferred();
+		if ( fLabelItem )	{
+			size.Set( fLabelView->Bounds().Width(), fLabelView->Bounds().Height() );
+			fLabelItem->SetExplicitMinSize( size );
+			fLabelItem->SetExplicitPreferredSize( size );
+		}
 	}
 	BControl::SetLabel( in.String() );
+	this->Relayout();
+	this->InvalidateLayout();
+	if ( this->Window() ) {
+		this->Window()->UpdateIfNeeded();
+	}
 }	// <-- end of function GeneralHourMinControl::SetLabel
 
 

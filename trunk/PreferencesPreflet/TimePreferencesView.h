@@ -27,6 +27,7 @@
 const uint32	k24hClockToggled					= '24CI';
 const	uint32	kAppointmentDurationChanged	= 'ApDC';
 const uint32	kReminderTimeChanged				= 'RmTC';
+const uint32	kSnoozeTimeChanged				= 'SnTC';
 
 
 class TimePreferencesView
@@ -45,6 +46,7 @@ class TimePreferencesView
 		BCheckBox* use24hClock;
 		GeneralHourMinControl* defaultAppointmentDuration;
 		GeneralHourMinControl* defaultReminderTime;
+		GeneralHourMinControl* defaultSnoozeTime;
 
 };
 

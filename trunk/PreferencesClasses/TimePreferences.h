@@ -30,6 +30,7 @@ class TimePreferences
 		bool		use24hClock;
 		TimeRepresentation		defaultAppointmentDuration;
 		TimeRepresentation		defaultReminderTime;
+		TimeRepresentation		defaultSnoozeTime;
 	
 	public:
 		TimePreferences( BMessage* in = NULL );
@@ -69,6 +70,19 @@ class TimePreferences
 		}		
 		virtual void				SetDefaultReminderTime( int hours, int minutes );
 		
+		
+		// Retrieve and update routines for default snooze time
+		inline virtual TimeRepresentation		GetDefaultSnoozeTime( void ) const {
+			return	defaultSnoozeTime;
+		}
+		inline virtual void		GetDefaultSnoozeTime( int* hours, int* mins ) {
+			if ( hours ) { *hours = defaultSnoozeTime.tm_hour; }
+			if ( mins  ) { *mins  = defaultSnoozeTime.tm_min;  }
+		}
+		inline virtual void		SetDefaultSnoozeTime( const TimeRepresentation& in ) {
+			defaultSnoozeTime = in;
+		}		
+		virtual void				SetDefaultSnoozeTime( int hours, int minutes );
 		
 		virtual TimePreferences operator= ( const TimePreferences& other );
 		virtual bool	Compare( const TimePreferences* other ) const;

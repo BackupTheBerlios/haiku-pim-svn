@@ -5,6 +5,7 @@
 #include <interface/Rect.h>
 #include <support/List.h>
 #include <Menu.h>
+#include <Messenger.h>
 #include <PopUpMenu.h>
 #include <InterfaceKit.h>
 
@@ -30,26 +31,14 @@ const uint32	kMonthIncreased	= 'MON+';
 const uint32	kYearChanged		= 'YEAR';
 const uint32	kYearDecreased		= 'YEA-';
 const uint32	kYearIncreased		= 'YEA+';
-const uint32	kOpenDateSelector = 'DATE';
 const uint32	kTodayModified		= 'TODY';
 const uint32	kReturnToToday		= 'RETD';
 const uint32	kHourUpdated		= 'HOUR';
 const uint32	kMinuteUpdated		= 'MINU';
 const uint32	kPMToggled			= 'PMTG';
 
+const uint32	kCalendarControlInvoked		= 'CCIn';
 
-
-
-class MonthMenu
-	:
-	public BMenu
-{	
-	public:
-		MonthMenu(const char * name, float width, float height);
-		virtual ~MonthMenu();
-		
-		virtual void MouseDown(BPoint point);
-};
 
 
 
@@ -58,16 +47,17 @@ class MonthMenu
  */
 class CalendarControl 
 	:
-	public BView
+	public BControl
 {
 protected:
 	// Placeholder for the data
 	TimeRepresentation fRepresentedTime;		//!< Represented time
 	
 	// UI elements
-	BStringView* 	fLabel, *fDateLabel;
-	BMenuBar* 		fMenuBar;
-	BMenu* 		fDateSelector;
+	BStringView* 	fLabel, 				//!< Label for the whole control
+						*fDateLabel;		//!< Selected date
+	BMenuBar* 		fMenuBar;			//!< Menu bar for the only menu
+	BMenu* 			fDateSelector;		//!< Selector for the date
 
 	// Internal configuration data
 	BList 	fWeekends;					//!< List of weekends
@@ -81,7 +71,7 @@ protected:
 	status_t		fLastError;				//!< Used to indicate problems in initialization
 
 	// Internal functions
-	virtual void InitTimeRepresentation( time_t initialSeconds = 0 );
+	
 	virtual void CreateMenu(void);
 	virtual BPopUpMenu* CreateMonthsMenu(map<int, DoubleNames> &listOfMonths);
 	virtual BPopUpMenu* CreateYearsMenu(int localYear);
@@ -93,7 +83,8 @@ public:
 					const char* name,
 					const BString& labelCalendar,
 					const BString& calModule,
-					time_t initialTime = 0 );
+					time_t	initialTime = time( NULL ),
+					BMessage* toSend = NULL );
 	virtual ~CalendarControl(void);
 	
 	/*!	\brief		Used to check status of this control.
@@ -104,6 +95,9 @@ public:
 	virtual void ParsePreferences( void );
 
 	inline virtual void SetOrder( DmyOrder toSet ) { fDateOrder = toSet; this->UpdateText(); }
+	
+	virtual void InitTimeRepresentation( time_t initialSeconds = 0 );
+	virtual void InitTimeRepresentation( const TimeRepresentation& trIn );
 
 	virtual void UpdateText();
 
@@ -117,10 +111,18 @@ public:
 	virtual void UpdateYearsMenu(int prevYear, int curYear);
 	
 	inline virtual void SetFirstDayOfWeek(uint32 day) {
-			fFirstDayOfEveryWeek = day;
+		fFirstDayOfEveryWeek = day;
 	}
 	
 	virtual uint32 GetFirstDayOfWeek(void) const { return fFirstDayOfEveryWeek; }
+	
+	virtual status_t Invoke( BMessage* toSend = NULL );
+	
+	virtual void		SetLabel( const char* = NULL );
+	
+	// We don't use values
+	virtual void SetValue( int32 value ) {}
+	virtual int32	Value() const { return 0; }
 };
 // <-- end of class CalendarControl
 

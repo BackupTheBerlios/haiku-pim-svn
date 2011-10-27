@@ -9,8 +9,8 @@
 #include <GraphicsDefs.h>
 #include <SupportDefs.h>
 
-#include "TimeRepresentation.h"
-#include "CalendarModule.h"
+//  #include "TimeRepresentation.h"
+// #include "CalendarModule.h"
 
 /*---------------------------------------------------------------------------------
  *			Applications' signatures and MIME types section
@@ -29,6 +29,8 @@ extern const char*		kEventFileMIMEType;
 /*---------------------------------------------------------------------------------
  *			Calendar modules section
  *--------------------------------------------------------------------------------*/
+class CalendarModule;
+ 
 #define		NUMBER_OF_CALENDAR_MODULES		1
 
 extern BList global_ListOfCalendarModules;	//!< List of all calendar modules in the system.

@@ -34,7 +34,10 @@ protected:
 	virtual void		UpdateSelectedValuesInMenus( void );
 
 public:	
-	TimeHourMinControl( BRect frame, const char* name, const BString& label );
+	TimeHourMinControl( BRect frame,
+							  const char* name,
+							  const BString& label,
+							  BMessage *message = NULL );
 	virtual ~TimeHourMinControl() {};
 	
 	// Disabling some functions of the base class

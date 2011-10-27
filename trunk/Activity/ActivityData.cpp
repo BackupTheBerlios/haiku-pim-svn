@@ -252,3 +252,69 @@ void		ActivityData::SetEmailAddress( const char* toSet, int placeholder )
 		bIsAddressEmpty[ placeholder ] = false;
 	}
 }	// <-- end of ActivityData::SetEmailAddress
+
+
+
+/*!	\brief		Verify command line parameters.
+ *		\details		Trim the parameters' line; remove everything after && or ; to prevent maluse.
+ *		\param[in]	in		Original parameters as string
+ *		\returns		Modified parameters.
+ */
+static
+BString		ActivityData::VerifyCommandLineParameters( const BString& in )
+{
+	BString 	toReturn( in );
+	int32		tempInt;
+	
+	toReturn.Trim();
+	
+	if ( ( ( tempInt = toReturn.FindFirst( "&&" ) ) != B_ERROR ) ||
+		  ( ( tempInt = toReturn.FindFirst( ";" ) ) != B_ERROR ) )
+	{
+		toReturn.Truncate( tempInt );
+	}
+	
+	return toReturn;
+}	// <-- end of function ActivityData::VerifyParameters
+
+
+/*!	\brief		Same function as the other version, but working on another input.
+ *		\details		Implemented as a call to the other function.
+ *		\param[in]	in		Array of chars with parameters.
+ *		\returns		\c BString with the corrected string of parameters.
+ */
+static
+BString		ActivityData::VerifyCommandLineParameters( const char* in )
+{
+	return ActivityData::VerifyCommandLineParameters( BString( in ) );
+}	// <-- end of second version of function ActivityData::VerifyCommandLineParameters
+
+
+
+/*!	\brief		Perform the desired activity
+ *		\details		This function is the central function of the activity mechanism.
+ *		\param[in]	in		Pointer to the \c Activity to be performed.
+ */
+static
+void			ActivityData::PerformActivity( ActivityData* in )
+{
+	if ( !in ) { return; }
+	
+	BString tempString;
+	
+	// Display a notification
+	if ( in->GetNotification( &tempString ) ) {
+		BAlert* alert = new BAlert( "Eventual notification",
+											tempString.String(),
+											"Ok" );
+		if ( alert ) {
+			alert->Go();
+		}
+	}
+	
+	// Run a program
+	
+	// Play a sound file
+	
+	
+}	// <-- end of function ActivityData::PerformActivity

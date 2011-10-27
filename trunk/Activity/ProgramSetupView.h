@@ -51,7 +51,7 @@ class ProgramFileFilter
  */
 class ProgramSetupView
 	:
-	public BView
+	public BBox
 {
 public:
 	ProgramSetupView( BRect frame, const char* name, ActivityData* data );
@@ -75,7 +75,6 @@ protected:
 
 	// UI elements
 	BCheckBox*		fCheckBox;
-	BBox* 			fOutline;
 	BStringView*	fLabel;
 	BStringView* 	fFileName;
 	BButton*			fOpenFilePanel;
@@ -84,9 +83,12 @@ protected:
 	BMessenger*		fThisMessenger;
 	BTextControl*	fCommandLineOptionsInput;
 	
+	BLayoutItem*	fLabelLayoutItem;
+	
 	// Service routines
 	virtual void		UpdateInitialValues( void );
 	virtual status_t	CreateAndShowFilePanel( void );
+	virtual void		ToggleCheckBox( bool );
 
 };	// <-- end of class ProgramSetupView
 

@@ -32,6 +32,8 @@ TYPE= SHARED
 #	in folder names do not work well with this makefile.
 SRCS= CalendarModulePreferences.cpp			\
 		EmailPreferences.cpp						\
+		CategoriesPreferences.cpp				\
+		TimePreferences.cpp						\
 		Preferences.cpp
 	  
 
@@ -59,11 +61,8 @@ RSRCS=
 #		naming scheme you need to specify the path to the library
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
-LIBS= 	Utilities	\
-			CalendarModule	\
-			TimeRepresentation	\
-		be			\
-		stdc++
+LIBS= 	be			\
+			stdc++
 
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
@@ -71,8 +70,7 @@ LIBS= 	Utilities	\
 #	be recursive, so include all of the paths where libraries can
 #	be found.  Directories where source files are found are
 #	automatically included.
-LIBPATHS= ../lib	\
-		/boot/system/lib/gcc4
+LIBPATHS= ../lib
 
 #	additional paths to look for system headers
 #	thes use the form: #include <header>
@@ -84,6 +82,7 @@ SYSTEM_INCLUDE_PATHS = /boot/develop/headers/cpp
 #	source file directories are automatically included
 LOCAL_INCLUDE_PATHS = 	../Utilities		\
 							 	../CalendarModule	\
+							 	../CategoryItem	\
 							 	../TimeRepresentation
 
 #	specify the level of optimization that you desire

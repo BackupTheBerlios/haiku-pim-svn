@@ -26,32 +26,23 @@
 NotificationView::NotificationView( BRect frame,
 												const char* name,
 												const char* label,
-												ActivityData* toEdit,
-												BMessage* message )
+												ActivityData* toEdit )
 	:
-	BControl( frame, 
-				 name, 
-				 label, 
-				 message, 
-				 B_FOLLOW_LEFT | B_FOLLOW_TOP, 
-				 B_WILL_DRAW | B_FRAME_EVENTS | B_PULSE_NEEDED ),
+	BBox( frame, 
+			name, 
+			B_FOLLOW_LEFT | B_FOLLOW_TOP, 
+			B_WILL_DRAW | B_FRAME_EVENTS | B_PULSE_NEEDED ),
 	fData( toEdit ),
 	fLastError( B_OK ),
 	fCheckBox( NULL ),
-	fOutline( NULL ),
 	fLabel( NULL ),
 	fTextView( NULL ),
-	fScroller( NULL )
+	fScroller( NULL ),
+	fLabelLayoutItem( NULL ),
+	fTextViewLayoutItem( NULL )
 {
-	BRect textViewRect;
-	BGroupLayout* groupLayout = new BGroupLayout( B_VERTICAL );
-	if ( !groupLayout ) {
-		/* Panic! */
-		fLastError = B_NO_MEMORY;
-		return;
-	}
-	groupLayout->SetInsets( 5, 5, 5, 5 );
-	this->SetLayout( groupLayout );
+	BRect textViewRect;		//!< Rectangle that defines text area inside of the TextView.
+	BSize	size;
 	
 	// Creating the checkbox
 	BMessage* toSend = new BMessage( kNotificationActivityCheckBoxToggled );
@@ -76,20 +67,7 @@ NotificationView::NotificationView( BRect frame,
 		fCheckBox->SetValue( fData->GetNotification( &fNotificationText ) );
 	}
 	
-	// Create the outline
-	fOutline = new BBox( ( textViewRect = ( ( this->Bounds() ).InsetBySelf( 5, 5 ) ) ),
-								"Notification outline" );
-	if ( !fOutline ) {
-		 /* Panic! */
-		fLastError = B_NO_MEMORY;
-		return;
-	}
-	fOutline->SetLabel( fCheckBox );
-	BLayoutItem* layoutItem = groupLayout->AddView( fOutline );
-	if ( layoutItem ) {
-		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_USE_FULL_WIDTH,
-																	 B_ALIGN_USE_FULL_HEIGHT ) );
-	}
+	BBox::SetLabel( fCheckBox );
 	
 	// Build internal layout
 	BGridLayout* gridLayout = new BGridLayout();
@@ -100,7 +78,7 @@ NotificationView::NotificationView( BRect frame,
 	}
 	gridLayout->SetInsets( 10, ( fCheckBox->Bounds() ).Height(), 10, 10 );
 	gridLayout->SetSpacing( 5, 2 );
-	fOutline->SetLayout( gridLayout );
+	this->SetLayout( gridLayout );
 	
 	// Create label
 	fLabel = new BStringView( BRect( 0, 0, 1, 1 ),
@@ -112,19 +90,23 @@ NotificationView::NotificationView( BRect frame,
 		return;
 	}
 	fLabel->ResizeToPreferred();
+	BRect labelRect = fLabel->Bounds();
 
 	// Place the label
-	layoutItem = gridLayout->AddView( fLabel, 0, 1, 1, 1 );
-	if ( layoutItem ) {
-		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_LEFT, B_ALIGN_TOP ) );
+	fLabelLayoutItem = gridLayout->AddView( fLabel, 0, 1, 1, 1 );
+	if ( fLabelLayoutItem ) {
+		fLabelLayoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_LEFT, B_ALIGN_TOP ) );
+		fLabelLayoutItem->SetExplicitMinSize( BSize( labelRect.Width(), labelRect.Height() ) );
+		fLabelLayoutItem->SetExplicitPreferredSize( BSize( labelRect.Width(), labelRect.Height() ) );
 	}
 	
 	// Create the text view and the scroller
-	textViewRect.right -= ( 10 + B_V_SCROLL_BAR_WIDTH );
-	textViewRect.bottom -= ( 10 + B_H_SCROLL_BAR_HEIGHT );
+//	textViewRect.right -= ( 10 + B_V_SCROLL_BAR_WIDTH );
+//	textViewRect.bottom -= ( 10 + B_H_SCROLL_BAR_HEIGHT );
 	fTextView = new BTextView( textViewRect,
 										"Notification Text",
-										BRect( 0, 0, textViewRect.right - textViewRect.left, textViewRect.bottom - textViewRect.top ),
+										BRect( 0, 0, 0, 0 ),
+//										BRect( 0, 0, textViewRect.right - textViewRect.left, textViewRect.bottom - textViewRect.top ),
 										B_FOLLOW_ALL_SIDES,
 										B_NAVIGABLE | B_WILL_DRAW );
 	if ( !fTextView ) {
@@ -133,7 +115,13 @@ NotificationView::NotificationView( BRect frame,
 		return;
 	}
 	fTextView->SetStylable( false );
-	fTextView->ResizeToPreferred();
+	size.SetWidth( 120 );
+	size.SetHeight( 3 * fTextView->LineHeight() );
+/*	textViewRect.SetLeftTop( BPoint( 0, 0 ) );
+	textViewRect.right = 120;
+	textViewRect.bottom = size.Height(); */
+	fTextView->ResizeTo( size.Width(), size.Height() );
+	fTextView->SetTextRect( BRect( 1, 1, size.Width() - 1, size.Height() - 1 ) );
 	
 	fScroller = new BScrollView( "Notification Text Scroller",
 										  fTextView,
@@ -148,10 +136,14 @@ NotificationView::NotificationView( BRect frame,
 	}
 	fTextView->SetText( fNotificationText.String() );
 	
-	layoutItem = gridLayout->AddView( fScroller, 1, 1, 1, 1 );
-	if ( layoutItem ) {
-		layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_LEFT,
-																	 B_ALIGN_USE_FULL_HEIGHT ) );
+	fTextViewLayoutItem = gridLayout->AddView( fScroller, 1, 1, 1, 1 );
+	if ( fTextViewLayoutItem ) {
+		fTextViewLayoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_LEFT,
+																	 			 B_ALIGN_USE_FULL_HEIGHT ) );
+		fTextViewLayoutItem->SetExplicitMinSize( BSize( size.Width() + B_V_SCROLL_BAR_WIDTH,
+																		size.Height() + B_H_SCROLL_BAR_HEIGHT ) );
+		fTextViewLayoutItem->SetExplicitPreferredSize( BSize( size.Width() + B_V_SCROLL_BAR_WIDTH,
+																				size.Height() + B_H_SCROLL_BAR_HEIGHT ) );
 	}
 	if ( fCheckBox->Value() == 0 ) {
 		fTextView->MakeEditable( false );
@@ -169,10 +161,10 @@ NotificationView::~NotificationView()
 		fScroller->RemoveSelf();
 		delete fScroller;
 	}
-	if ( fOutline ) {
-		fOutline->RemoveSelf();
-		delete fOutline;
-	}	
+	if ( fLabel ) {
+		fLabel->RemoveSelf();
+		delete fLabel;
+	}
 }	// <-- end of destructor
 
 
@@ -181,12 +173,23 @@ NotificationView::~NotificationView()
  */
 void		NotificationView::SetLabel( const char* toSet )
 {
-	BControl::SetLabel( toSet );
+	BSize size;
+	fLabelText.SetTo( toSet );
 	if ( fLabel ) {
 		fLabel->SetText( toSet );
-	}
+		fLabel->ResizeToPreferred();
+		size.SetWidth( fLabel->Bounds().Width() );
+		size.SetHeight( fLabel->Bounds().Height() );
+		if ( fLabelLayoutItem ) {
+			fLabelLayoutItem->SetExplicitMinSize( size );
+			fLabelLayoutItem->SetExplicitPreferredSize( size );
+		}
+	}	
 	InvalidateLayout();
 	Invalidate();
+	if ( this->Window() ) {
+		this->Window()->UpdateIfNeeded();
+	}
 }	// <-- end of function NotificationView::SetLabel
 
 
@@ -199,7 +202,7 @@ void		NotificationView::AttachedToWindow()
 		this->Looper()->AddHandler( this );
 		this->Looper()->Unlock();
 	}
-	BControl::AttachedToWindow();
+	BView::AttachedToWindow();
 	fCheckBox->SetTarget( this );
 }	// <-- end of function NotificationView::AttachedToWindow
 
@@ -212,7 +215,7 @@ void		NotificationView::Pulse( void )
 		fData->SetNotification( ( fCheckBox->Value() != 0 ),
 										( fNotificationText.SetTo( fTextView->Text() ) ) );
 	}
-	BControl::Pulse();
+	BView::Pulse();
 }	// <-- end of function NotificationView::Draw
 
 
@@ -235,7 +238,7 @@ void		NotificationView::MessageReceived( BMessage* in )
 				
 				if ( this->fCheckBox->Value() == 0 ) {
 					if ( this->fTextView ) {
-						this->fTextView->MakeEditable( false );
+						EnableTextView( false );
 					}
 					if ( this->fData ) {
 						this->fData->SetNotification( false,
@@ -245,7 +248,7 @@ void		NotificationView::MessageReceived( BMessage* in )
 				else
 				{
 					if ( this->fTextView ) {
-						this->fTextView->MakeEditable( true );
+						EnableTextView( true );
 					}
 					if ( this->fData ) {
 						this->fData->SetNotification( true,
@@ -256,8 +259,89 @@ void		NotificationView::MessageReceived( BMessage* in )
 
 			break;
 		default:
-			BControl::MessageReceived( in );
+			BView::MessageReceived( in );
 	};
 	
 }	// <-- end of function NotificationView::MessageReceived
 
+
+
+/*!	\brief		Compute the preferred size for this View.
+ *		\param[out]	width		Pointer to the preferred width
+ *		\param[out]	height	Pointer to the preferred height
+ */
+void		NotificationView::GetPreferredSize( float* width, float* height )
+{
+	BGridLayout* layout = ( BGridLayout* )this->GetLayout();
+	BSize size( layout->PreferredSize() );
+	if ( width )
+		*width = size.Width() + 10;
+	if ( height )
+		*height = size.Height() + 30;
+	
+}	// <-- end of function NotificationView::GetPreferredSize
+
+
+
+/*!	\brief		When this view is resized, the text rectangle should be resized as well.
+ */
+void		NotificationView::FrameResized( float width, float height )
+{
+	BBox::FrameResized( width, height );
+	
+	if ( fTextView ) {
+		BRect rect = fTextView->Bounds();
+		rect.InsetBySelf( 2, 2 );
+		fTextView->SetTextRect( rect );
+	}
+	
+	this->Invalidate();
+	if ( this->Window() )
+		this->Window()->UpdateIfNeeded();
+	
+}	// <-- end of function NotificationView::FrameResized
+
+
+
+/*!	\brief		Update colors of the TextView according to view being enabled or not.
+ *		\details		Based on function "BTextControl::_UpdateTextViewColors( bool )".
+ *		\param[in]	enabled		\c true if this view is going to be enabled.
+ *										\c false if not.
+ */
+void 		NotificationView::EnableTextView( bool enabled )
+{
+	rgb_color	textColor;	//!< Color for displaying the text
+	rgb_color	bgColor;		//!< Color for displaying the background
+	BFont			font;
+	
+	if ( !fTextView ) {
+		return;	// Nothing to do
+	}
+	
+		// Only single style is used, therefore it doesn't matter what offset to use.
+		// However, offsets other then 0 are not guaranteed to exits.
+	fTextView->GetFontAndColor( 0, &font );
+	
+	if ( enabled ) {
+		textColor = ui_color( B_DOCUMENT_TEXT_COLOR );
+		bgColor = ui_color( B_DOCUMENT_BACKGROUND_COLOR );
+		fTextView->SetFlags( fTextView->Flags() | B_NAVIGABLE );
+		fTextView->MakeEditable( true );
+	} else {
+		textColor = tint_color( ui_color( B_PANEL_BACKGROUND_COLOR ),
+										B_DISABLED_LABEL_TINT );
+		bgColor = tint_color( ui_color( B_PANEL_BACKGROUND_COLOR ),
+									 B_LIGHTEN_2_TINT );
+		fTextView->SetFlags( fTextView->Flags() & ~B_NAVIGABLE );
+		fTextView->MakeEditable( false );
+	}
+	
+	fTextView->SetFontAndColor( &font, B_FONT_ALL, &textColor );
+	fTextView->SetViewColor( bgColor );
+	fTextView->SetLowColor( bgColor );
+	
+	// Redisplay
+	fTextView->Invalidate();
+	if ( this->Window() )
+		Window()->UpdateIfNeeded();
+}	// <-- end of function NotificationView::UpdateTextViewColors
