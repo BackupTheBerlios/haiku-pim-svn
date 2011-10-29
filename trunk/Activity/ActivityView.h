@@ -37,13 +37,17 @@ public:
 	
 	inline virtual status_t		InitCheck() const { return fLastError; }
 	
+	inline virtual bool IsEnabled() const { return bIsEnabled; }
+	virtual void	SetEnabled( bool toSet );
+	
 protected:
 	// Data placeholders
-	ActivityData* fData;
+	ActivityData* 		fData;
 	NotificationView* fNotView;
 	SoundSetupView*	fSoundView;
 	ProgramSetupView*	fProgView;
 	status_t				fLastError;
+	bool					bIsEnabled;
 	
 	// Service functions
 	virtual void 	BuildUI( void ) {};

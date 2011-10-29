@@ -93,6 +93,7 @@ SoundSetupView::SoundSetupView( BRect frame, const char *name, ActivityData* dat
 			B_WILL_DRAW | B_FRAME_EVENTS ),
 	fData( data ),
 	fLastError( B_OK ),
+	bIsEnabled( true ),
 	fCheckBox( NULL ),
 	fLabel( NULL ),
 	fFileName( NULL ),
@@ -496,3 +497,21 @@ void		SoundSetupView::ToggleCheckBox( bool enable )
 		}
 	}
 }	// <-- end of SoundSetupView::ToggleCheckBox
+
+
+
+/*!	\brief	Enable or disable the view.
+ */
+void		SoundSetupView::SetEnabled( bool toSet ) {
+	if ( toSet == IsEnabled() ) { return; }
+	bIsEnabled = toSet;
+	
+	if ( fCheckBox ) {
+		fCheckBox->SetEnabled( toSet );
+		
+		if ( fCheckBox->Value() != 0 ) {
+			fOpenFilePanel->SetEnabled( toSet );	
+		}		
+	}
+	
+}	// <-- end of function SoundSetupView::SetEnabled

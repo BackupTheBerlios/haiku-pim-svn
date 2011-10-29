@@ -47,6 +47,11 @@ public:
 	ActivityData( BMessage* in = NULL );
 	virtual	~ActivityData() {}	// No dynamically allocated data - no need in destructor
 
+	// Help and support functions
+	static BString	VerifyCommandLineParameters( const BString& in );
+	static BString	VerifyCommandLineParameters( const char* in );
+	static void		PerformActivity( ActivityData* in );
+
 	// Archive and unarchive functions
 	virtual status_t	Archive( BMessage* out );
 	virtual void		Instantiate( BMessage* in = NULL );

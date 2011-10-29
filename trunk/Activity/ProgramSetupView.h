@@ -64,6 +64,9 @@ public:
 	inline virtual status_t	InitCheck() const { return fLastError; }
 
 	virtual void		FrameResized( float width, float height );
+	
+	inline virtual bool	IsEnabled() const { return bIsEnabled; }
+	virtual void		SetEnabled( bool toSet );
 
 protected:
 	// Data placeholders
@@ -72,6 +75,7 @@ protected:
 	BPath				fPathToFile;
 	BString			fCommandLineOptions;
 	status_t			fLastError;
+	bool				bIsEnabled;
 
 	// UI elements
 	BCheckBox*		fCheckBox;

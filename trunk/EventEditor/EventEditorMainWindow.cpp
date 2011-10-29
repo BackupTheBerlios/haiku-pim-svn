@@ -25,11 +25,14 @@
  */
 EventEditorMainWindow::EventEditorMainWindow( )
 	:
-	BWindow(	BRect( 0, 0, 400, 500 ),
+	BWindow(	BRect( 0, 0, 400, 550 ),
 				"Event Editor",
 				B_TITLED_WINDOW,
 				0 ),
-	genView( NULL )
+	genView( NULL ),
+	remView( NULL ),
+	actView( NULL ),
+	noteView( NULL )
 {
 	BView* MainView = new BView( BWindow::Bounds(),
 										  "Event Editor Main View",
@@ -63,22 +66,47 @@ EventEditorMainWindow::EventEditorMainWindow( )
 	layout->AddView( tabView );
 	
 	BRect individualTab = tabView->Bounds();
-	individualTab.bottom -= tabView->TabHeight();
-		
+	individualTab.bottom -= ( tabView->TabHeight() + 5 );
+	
+	// General view
 	genView = new EventEditor_GeneralView( individualTab, &fData );
-	if ( !genView || genView->InitCheck() != B_OK ) {
-		
-		// Debugging!
-		printf( "Error\n" );
-		
+	if ( !genView || genView->InitCheck() != B_OK ) {		
 		global_toReturn = B_NO_MEMORY;
 		be_app->PostMessage( B_QUIT_REQUESTED );
-	}
-	
-	BTab* tab = new BTab();
-	
+	}	
+	BTab* tab = new BTab();	
 	tabView->AddTab( genView, tab );
 	tab->SetLabel( "General" );
+	
+	// Reminder view
+	remView = new EventEditor_ReminderView( individualTab, &fData );
+	if ( !remView || remView->InitCheck() != B_OK ) {
+		global_toReturn = B_NO_MEMORY;
+		be_app->PostMessage( B_QUIT_REQUESTED );
+	}	
+	tab = new BTab();	
+	tabView->AddTab( remView, tab );
+	tab->SetLabel( "Reminder" );
+	
+	// Event activity
+	actView = new ActivityView( individualTab.InsetByCopy( 5, 5 ), "Event activity", fData.GetEventActivity() );
+	if ( !actView || actView->InitCheck() != B_OK ) {
+		global_toReturn = B_NO_MEMORY;
+		be_app->PostMessage( B_QUIT_REQUESTED );
+	}	
+	tab = new BTab();	
+	tabView->AddTab( actView, tab );
+	tab->SetLabel( "Activity" );
+	
+	// Note view
+	noteView = new EventEditor_NoteView( individualTab.InsetByCopy( 5, 5 ), &fData );
+	if ( !noteView || noteView->InitCheck() != B_OK ) {
+		global_toReturn = B_NO_MEMORY;
+		be_app->PostMessage( B_QUIT_REQUESTED );
+	}	
+	tab = new BTab();	
+	tabView->AddTab( noteView, tab );
+	tab->SetLabel( "Note" );
 	
 	this->CenterOnScreen();
 }	// <-- end of constructor for MainWindow

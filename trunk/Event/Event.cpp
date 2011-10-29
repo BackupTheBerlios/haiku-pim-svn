@@ -599,7 +599,9 @@ status_t		EventData::_SaveToFile( BFile* file )
  */
 status_t		EventData::SetDuration( time_t durIn, EventType* newType )
 {
-	this->fEventType = *newType;
+	if ( newType ) {
+		this->fEventType = *newType;
+	}
 
 	switch ( fEventType ) {
 		case kEventType_Note:

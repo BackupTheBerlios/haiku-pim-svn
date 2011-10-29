@@ -177,6 +177,9 @@ public:
 	
 	virtual status_t	SetStartTime( int hour, int min );
 	virtual status_t	SetStartDate( int day, int month, int year, BString calendar = BString( "Gregorian" ) );
+	virtual status_t	SetStartDate( const TimeRepresentation& trIn ) {
+		return SetStartDate( trIn.tm_mday, trIn.tm_mon, trIn.tm_year, trIn.GetCalendarModule() );
+	}
 	
 	virtual time_t		GetDuration() const { return fDuration; }
 	virtual status_t	SetDuration( time_t durIn, EventType* newType = NULL );

@@ -58,6 +58,9 @@ class	NotificationView
 		virtual void	GetPreferredSize( float* width, float* height );
 		virtual void	FrameResized( float width, float height );
 		virtual void	Pulse( void );
+		
+		virtual void	SetEnabled( bool toSet );
+		virtual bool	IsEnabled() const { return bIsEnabled; }
 	
 	protected:
 		// Information holders
@@ -65,6 +68,7 @@ class	NotificationView
 		BString			fNotificationText;
 		BString			fLabelText;
 		status_t			fLastError;
+		bool				bIsEnabled;
 
 		// UI elements
 		BCheckBox*		fCheckBox;

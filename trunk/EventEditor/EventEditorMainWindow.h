@@ -2,11 +2,6 @@
  * Copyright 2011 Alexey Burshtein <aburst02@campus.haifa.ac.il>
  * All rights reserved. Distributed under the terms of the MIT license.
  */
-
-//Copyright (C) 2001, 2002 Kevin H. Patterson
-//Available for use under the terms of the BSD license agreement:
-//See the associated file "License.txt" for details.
-
 #ifndef _EVENT_EDITOR_MAIN_WINDOW_H_
 #define _EVENT_EDITOR_MAIN_WINDOW_H_
 
@@ -18,6 +13,9 @@
 
 // Project includes
 #include "EventEditorGeneralView.h"
+#include "EventEditorReminderView.h"
+#include "ActivityView.h"
+#include "EventEditorNoteView.h"
 
 extern uint32	global_toReturn;
 	
@@ -28,9 +26,10 @@ class EventEditorMainWindow
 protected:
 	EventData fData;
 
-	
 	EventEditor_GeneralView* genView;
-	
+	EventEditor_ReminderView* remView;
+	ActivityView*				actView;
+	EventEditor_NoteView*	noteView;
 	
 public:
 	EventEditorMainWindow();

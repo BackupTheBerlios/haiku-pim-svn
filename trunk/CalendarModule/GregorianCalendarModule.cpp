@@ -1,5 +1,7 @@
 #include <map>
 #include <stdlib.h>
+#include <stdio.h>
+
 #include "GregorianCalendarModule.h"
 #include "CalendarModule.h"
 #include "TimeRepresentation.h"
@@ -366,20 +368,21 @@ TimeRepresentation GregorianCalendar::FromTimeTToLocalCalendar(const time_t time
 
 	// Calculating and filling the week day
 
-	// If the resulting day is not Sunday, we need to calculate it in means of 
+	// If the resulting day is not Sunday, we need to calculate it
 	if (temp.tm_wday >= 0) {
 		toReturn.tm_wday = temp.tm_wday;
 	} else {
 		toReturn.tm_wday = -1;	// Invalid week day
 	}
-
-	// Setting the time zone to GMT
-	toReturn.tm_gmtoff = 0;
-	toReturn.tm_zone = new char[4];
-	if (! toReturn.tm_zone ) { // Panic!
-		exit(1);
-	}
-	strcpy(toReturn.tm_zone, "GMT");
+	
+	
+//	// Setting the time zone to GMT
+//	toReturn.tm_gmtoff = 0;
+//	toReturn.tm_zone = new char[4];
+//	if (! toReturn.tm_zone ) { // Panic!
+//		exit(1);
+//	}
+//	strcpy(toReturn.tm_zone, "GMT");
 
 	return toReturn;
 }

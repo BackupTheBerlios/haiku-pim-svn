@@ -4,7 +4,9 @@
 #include <interface/TextControl.h>
 #include <interface/Rect.h>
 #include <support/List.h>
+// #include <tracker/DialogPane.h>
 #include <Menu.h>
+#include <MenuField.h>
 #include <Messenger.h>
 #include <PopUpMenu.h>
 #include <InterfaceKit.h>
@@ -36,6 +38,7 @@ const uint32	kReturnToToday		= 'RETD';
 const uint32	kHourUpdated		= 'HOUR';
 const uint32	kMinuteUpdated		= 'MINU';
 const uint32	kPMToggled			= 'PMTG';
+const uint32	kCalendarModuleChosen = 'CMCh';
 
 const uint32	kCalendarControlInvoked		= 'CCIn';
 
@@ -55,14 +58,17 @@ protected:
 	
 	// UI elements
 	BStringView* 	fLabel, 				//!< Label for the whole control
-						*fDateLabel;		//!< Selected date
+						*fDateLabel,		//!< Selected date
+						*fCalendarModuleLabel;	//!< Label for selecting the calendar module
 	BMenuBar* 		fMenuBar;			//!< Menu bar for the only menu
 	BMenu* 			fDateSelector;		//!< Selector for the date
+	BMenu*			fCalendarsMenu;	//!< List of available calendars
+	BMenuField*		fCalendarModuleSelector;	//!< Change the calendar module
+//	PaneSwitch*		fPaneSwitch;		//!< Show/hide the calendar module selector
 
 	// Internal configuration data
 	BList 	fWeekends;					//!< List of weekends
 	uint32 	fFirstDayOfEveryWeek;	//!< Defines when the week starts
-	bool 		bIsControlEnabled;		//!< If "true", the control is enabled
 	DmyOrder		fDateOrder;				//!< Defines how the date is printed
 	CalendarModule* fCalModule;		//!< Which calendar module is used in this control
 	rgb_color	fColorForWeekends;	//!< Which color is used to mark the weekends
@@ -77,6 +83,7 @@ protected:
 	virtual BPopUpMenu* CreateYearsMenu(int localYear);
 	virtual void UpdateTargets( BMenu* menuIn = NULL );
 	virtual BString BuildDateRepresentationString(bool useLongMonthNames = true);
+	virtual BMenu*	CreateMenuOfCalendarModules();
 
 public:
 	CalendarControl(BRect frame,
@@ -103,10 +110,9 @@ public:
 
 	virtual void AttachedToWindow();
 	
-	virtual void MessageReceived (BMessage* in);
+	virtual void MessageReceived ( BMessage* in );
 	
-	virtual void SetEnabled(bool toSet = true);
-	inline virtual bool IsEnabled( void ) const { return bIsControlEnabled; }
+	virtual void SetEnabled( bool toSet = true );
 	
 	virtual void UpdateYearsMenu(int prevYear, int curYear);
 	

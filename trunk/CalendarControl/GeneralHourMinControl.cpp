@@ -795,7 +795,7 @@ void 			GeneralHourMinControl::UpdateSelectedValuesInMenus()
  */
 bool		GeneralHourMinControl::GetCheckBoxValue( bool* bHasCheckBox ) const
 {
-	if ( bDoesCheckBoxExist ) {
+	if ( bDoesCheckBoxExist && bHasCheckBox ) {
 		*bHasCheckBox = ( bDoesCheckBoxExist && ( fCheckBox != NULL ) );
 	}
 	
@@ -1098,10 +1098,12 @@ void		GeneralHourMinControl::SetMinutesLimit( unsigned int limit )
  *		\param[in]	newState		"true" if enabling the object, "false" if disabling.
  */
 void		GeneralHourMinControl::SetEnabled( bool newState )
-{
+{	
 	// Checking if we have anything to do
 	if ( this->IsEnabled() == newState )
 		return;
+		
+	BControl::SetEnabled( newState );
 		
 	if ( fSelectorMenuBar )
 		fSelectorMenuBar->SetEnabled( newState );

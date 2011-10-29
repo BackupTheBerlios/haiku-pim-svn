@@ -95,6 +95,7 @@ ProgramSetupView::ProgramSetupView( BRect frame, const char *name, ActivityData*
 	BBox( frame, name, B_FOLLOW_LEFT | B_FOLLOW_TOP, B_WILL_DRAW | B_FRAME_EVENTS ),
 	fData( data ),
 	fLastError( B_OK ),
+	bIsEnabled( true ),
 	fCheckBox( NULL ),
 	fLabel( NULL ),
 	fFileName( NULL ),
@@ -390,6 +391,7 @@ void 		ProgramSetupView::MessageReceived( BMessage* in ) {
 
 	entry_ref	tempRef;
 	BEntry		programFile;
+	BString		sb;
 	
 	if ( !in ) { return; }
 	
@@ -409,7 +411,9 @@ void 		ProgramSetupView::MessageReceived( BMessage* in ) {
 		case kProgramActivityCommandLineOptionsChanged:
 		
 			if ( fData && fCommandLineOptionsInput ) {
-				fData->SetProgramOptions( BString( fCommandLineOptionsInput->Text() ) );
+				sb = ActivityData::VerifyCommandLineParameters( fCommandLineOptionsInput->Text() );
+				fData->SetProgramOptions( sb );
+				fCommandLineOptionsInput->SetText( sb.String() );
 			}
 		
 			break;
@@ -570,3 +574,21 @@ void		ProgramSetupView::ToggleCheckBox( bool enable )
 		}
 	}
 }	// <-- end of ProgramSetupView::ToggleCheckBox
+
+
+
+/*!	\brief		Enable or disable the view.
+ */
+void		ProgramSetupView::SetEnabled( bool toSet )
+{
+	if ( toSet == IsEnabled() ) { return; }
+	bIsEnabled = toSet;
+	
+	if ( fCheckBox ) {
+		fCheckBox->SetEnabled( toSet );
+		if ( fCheckBox->Value() != 0 ) {
+			fOpenFilePanel->SetEnabled( toSet );
+			fCommandLineOptionsInput->SetEnabled( toSet );
+		}
+	}	
+}	// <-- end of function ProgramSetupView::SetEnabled

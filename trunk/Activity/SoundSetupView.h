@@ -64,6 +64,9 @@ public:
 	
 	/*!	\brief	If this function doesn't return B_OK, last action failed. */
 	inline virtual status_t	InitCheck() const { return fLastError; }
+	
+	inline virtual bool	IsEnabled() const { return bIsEnabled; }
+	virtual void SetEnabled( bool toSet );
 					
 protected:
 	// Data placeholders
@@ -71,6 +74,7 @@ protected:
 	BPath				fPathToDirectory;
 	BPath				fPathToFile;
 	status_t			fLastError;
+	bool				bIsEnabled;
 
 	// UI elements
 	BCheckBox*		fCheckBox;

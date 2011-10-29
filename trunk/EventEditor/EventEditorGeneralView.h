@@ -42,6 +42,7 @@ class EventEditor_GeneralView
 		TimeRepresentation	fEndTime;
 		CalendarModule*		fCalModule;
 		time_t					fDuration;
+		time_t					fPreviousDuration;
 		
 		// UI elements
 		BTextControl*	_EventName;
@@ -50,6 +51,8 @@ class EventEditor_GeneralView
 		BMenuField*		_CategoryMenuField;
 		BCheckBox*		_EventLastsWholeDays;
 		BCheckBox*		_EventIsPrivate;
+		BStringView*	_DurationLabel;
+		BStringView*	_DurationLength;
 		
 		// Start time selector
 		BBox*				_StartMomentSelector;
@@ -58,11 +61,21 @@ class EventEditor_GeneralView
 		
 		// End time selector
 		BBox*				_EndMomentSelector;
+		BCheckBox*					_EndTimeEnabled;
 		TimeHourMinControl*		_EndTimeHourMinControl;
 		CalendarControl*			_EndDateControl;
 		
 		// Service functions
-		BBox*				CreateStartMomentSelector();
+		virtual BBox*	CreateStartMomentSelector();
+		virtual BBox*	CreateEndMomentSelector();
+		virtual void	SetEnabledStateOfEndTimeBox();
+		virtual void	SetCorrectDuration();
+		virtual void	UpdateDurationLengthLabel( bool mayUpdate = true );
+		virtual bool	VerifyEndTimeIsGreaterThenStart( const TimeRepresentation& start,
+																		const TimeRepresentation& end,
+																		time_t* newDuration );
+		virtual time_t	CalculateNumberOfDaysForDuration( time_t durIn,
+																		 bool inSecs = true );
 		
 };	// <-- end of class EventEditor_GeneralView
 

@@ -33,6 +33,8 @@ TYPE= APP
 SRCS= EventEditorApp.cpp	\
 		EventEditorMainWindow.cpp	\
 		EventEditorGeneralView.cpp	\
+		EventEditorReminderView.cpp	\
+		EventEditorNoteView.cpp		\
 		main.cpp
 
 #	specify the resource definition files to use

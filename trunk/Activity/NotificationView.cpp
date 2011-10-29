@@ -34,6 +34,7 @@ NotificationView::NotificationView( BRect frame,
 			B_WILL_DRAW | B_FRAME_EVENTS | B_PULSE_NEEDED ),
 	fData( toEdit ),
 	fLastError( B_OK ),
+	bIsEnabled( true ),
 	fCheckBox( NULL ),
 	fLabel( NULL ),
 	fTextView( NULL ),
@@ -146,7 +147,7 @@ NotificationView::NotificationView( BRect frame,
 																				size.Height() + B_H_SCROLL_BAR_HEIGHT ) );
 	}
 	if ( fCheckBox->Value() == 0 ) {
-		fTextView->MakeEditable( false );
+		EnableTextView( false );
 	}
 	
 }	// <-- end of constructor
@@ -345,3 +346,19 @@ void 		NotificationView::EnableTextView( bool enabled )
 	if ( this->Window() )
 		Window()->UpdateIfNeeded();
 }	// <-- end of function NotificationView::UpdateTextViewColors
+
+
+
+/*!	\brief		Enable or disable the view.
+ */
+void		NotificationView::SetEnabled( bool toSet ) {
+	if ( toSet == IsEnabled() ) { return; }
+
+	bIsEnabled = toSet;
+	if ( fCheckBox ) {
+		fCheckBox->SetEnabled( toSet );
+		if ( fCheckBox->Value() != 0 ) {
+			EnableTextView( toSet );
+		}
+	}
+}	// <-- end of function NotificationView::SetEnabled

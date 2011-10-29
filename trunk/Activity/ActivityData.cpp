@@ -7,6 +7,7 @@
 #include "ActivityData.h"
 
 // OS includes
+#include <Alert.h>
 #include <Errors.h>
 
 // POSIX includes
@@ -260,7 +261,6 @@ void		ActivityData::SetEmailAddress( const char* toSet, int placeholder )
  *		\param[in]	in		Original parameters as string
  *		\returns		Modified parameters.
  */
-static
 BString		ActivityData::VerifyCommandLineParameters( const BString& in )
 {
 	BString 	toReturn( in );
@@ -275,7 +275,7 @@ BString		ActivityData::VerifyCommandLineParameters( const BString& in )
 	}
 	
 	return toReturn;
-}	// <-- end of function ActivityData::VerifyParameters
+}	// <-- end of function ActivityData::VerifyCommandLineParameters
 
 
 /*!	\brief		Same function as the other version, but working on another input.
@@ -283,10 +283,12 @@ BString		ActivityData::VerifyCommandLineParameters( const BString& in )
  *		\param[in]	in		Array of chars with parameters.
  *		\returns		\c BString with the corrected string of parameters.
  */
-static
 BString		ActivityData::VerifyCommandLineParameters( const char* in )
 {
-	return ActivityData::VerifyCommandLineParameters( BString( in ) );
+	if ( in )
+		return ActivityData::VerifyCommandLineParameters( BString( in ) );
+	else
+		return BString( "" );
 }	// <-- end of second version of function ActivityData::VerifyCommandLineParameters
 
 
@@ -295,7 +297,6 @@ BString		ActivityData::VerifyCommandLineParameters( const char* in )
  *		\details		This function is the central function of the activity mechanism.
  *		\param[in]	in		Pointer to the \c Activity to be performed.
  */
-static
 void			ActivityData::PerformActivity( ActivityData* in )
 {
 	if ( !in ) { return; }

@@ -8,6 +8,8 @@
 #include <Invoker.h>
 #include <Layout.h>
 #include <LayoutUtils.h>
+#include <MenuItem.h>
+#include <Message.h>
 #include <SpaceLayoutItem.h>
 #include <GridLayout.h>
 
@@ -64,7 +66,7 @@ CalendarControl::CalendarControl(BRect frame,
 			 B_NAVIGABLE | B_WILL_DRAW | B_FRAME_EVENTS ),
 	fLabel(NULL),
 	fDateLabel(NULL),
-	bIsControlEnabled(true),
+	fDateSelector( NULL ),
 	fLastError( B_OK )
 {
 	// Firstly, set the calendar module
@@ -99,6 +101,35 @@ CalendarControl::CalendarControl(BRect frame,
 		fLastError = B_NO_MEMORY;
 		return;
 	}
+	
+	
+	fCalendarModuleLabel = new BStringView( BRect( 0, 0, 1, 1 ),
+														 "label for the calendar module selector",
+														 "Calendar:" );
+	if ( !fCalendarModuleLabel ) {
+		/* Panic! */
+		fLastError = B_NO_MEMORY;
+		return;
+	}
+	fCalendarModuleLabel->ResizeToPreferred();
+	
+	fCalendarsMenu = CreateMenuOfCalendarModules();
+	if ( !fCalendarsMenu ) {
+		/* Panic! */
+		fLastError = B_NO_MEMORY;
+		return;
+	}
+	
+	fCalendarModuleSelector = new BMenuField( BRect( 0, 0, 1, 1 ),
+															"calendar module selector",
+															NULL,		// Label is created separately
+															fCalendarsMenu );
+	if ( !fCalendarModuleSelector ) {
+		/* Panic! */
+		fLastError = B_NO_MEMORY;
+		return;
+	}
+	fCalendarModuleSelector->ResizeToPreferred();
 	
 	// Create the menu
 	CreateMenu();
@@ -135,22 +166,34 @@ CalendarControl::CalendarControl(BRect frame,
 	}
 	lay->SetInsets(0, 5, 0, 0);
 	lay->SetSpacing( 10, 5 );
+	lay->SetExplicitAlignment( BAlignment( B_ALIGN_USE_FULL_WIDTH, B_ALIGN_MIDDLE ) );
 	this->SetLayout(lay);
 	
 	BLayoutItem* layoutItem;
-	BSize size1;
 	
 	layoutItem = lay->AddView( fLabel, 0, 0 );
-	size1.SetWidth( layoutItem->Frame().Width() );
-	size1.SetHeight( layoutItem->Frame().Height() );
-	layoutItem->SetExplicitPreferredSize( size1 );
 	layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_LEFT, B_ALIGN_TOP ) );
 	layoutItem = lay->AddView( fDateLabel, 1, 0 );
-	layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_LEFT, B_ALIGN_TOP ) );
+	layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_USE_FULL_WIDTH, B_ALIGN_TOP ) );
 	layoutItem = lay->AddView( fMenuBar, 2, 0 );	
 	layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_RIGHT, B_ALIGN_TOP ) );
-	size.SetHeight( size.Height() );
 	layoutItem->SetExplicitMaxSize( size );
+	
+	layoutItem = lay->AddView( fCalendarModuleLabel, 0, 1 );
+	layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_LEFT, B_ALIGN_MIDDLE ) );
+	
+	layoutItem = lay->AddView( fCalendarModuleSelector, 1, 1 );
+	layoutItem->SetExplicitAlignment( BAlignment( B_ALIGN_USE_FULL_WIDTH, B_ALIGN_TOP ) );
+
+	lay->SetColumnWeight( 0, 0 );
+	lay->SetColumnWeight( 1, 1000 );
+	lay->SetColumnWeight( 2, 0 );
+	
+	lay->SetMaxColumnWidth( 2, BUTTON_WIDTH );
+	
+	this->InvalidateLayout();
+	this->Relayout();
+	this->Invalidate();
 	
 	fLastError = B_OK;
 }
@@ -204,21 +247,11 @@ void CalendarControl::AttachedToWindow() {
 		looper->UnlockLooper();
 	}
 	
-	/* Update targets of all children
-	BMenu* men; BMenuItem* item;
-	if (fDateSelector) {
-		for (int i=0; i<fDateSelector->CountItems(); i++) {
-			if ( (men = fDateSelector->SubmenuAt(i) ) != NULL ) {
-				men->SetTargetForItems(this);	
-			} else {
-				if ( ( item = fDateSelector->ItemAt(i) ) != NULL ) {
-					item->SetTarget(this);	
-				}	
-			}
-		}	
-	}
-*/
 	UpdateTargets( fDateSelector );
+	
+	this->InvalidateLayout();
+	this->Relayout();
+	this->Invalidate();
 }
 // <-- end of function CalendarControl::AttachedToWindow
 
@@ -241,6 +274,7 @@ void		CalendarControl::InitTimeRepresentation( const TimeRepresentation& trIn ) 
 	}
 	
 	CreateMenu();
+	UpdateText();
 } 
 
 
@@ -387,7 +421,19 @@ CalendarControl::~CalendarControl(void)
 		delete fDateLabel;
 		fDateLabel = NULL;
 	}
-//	this->weekends.MakeEmpty();
+	
+	if ( !fCalendarModuleLabel ) {
+		RemoveChild( fCalendarModuleLabel );
+		delete fCalendarModuleLabel;
+		fCalendarModuleLabel = NULL;
+	}
+	
+	if ( !fCalendarModuleSelector ) {
+		RemoveChild( fCalendarModuleSelector );
+		delete fCalendarModuleSelector;
+		fCalendarModuleSelector = NULL;
+	}
+	
 }
 // <-- end of destructor for the CalendarControl
 
@@ -910,11 +956,16 @@ void CalendarControl::UpdateTargets( BMenu* menuIn )
 void CalendarControl::MessageReceived(BMessage* in) {
 	int8 month;
 	int year;
+	bool dontSendMessage = false;
 	BMessage reply(B_REPLY);
 
 	if (!in) { return; }	// Sanity check
 
 	BString sb;
+	
+	CalendarModule* from = NULL, *to = NULL;
+	time_t	moment;
+	TimeRepresentation toSet;
 	
 	if ( !fCalModule ) {
 		return BControl::MessageReceived( in );
@@ -939,7 +990,6 @@ void CalendarControl::MessageReceived(BMessage* in) {
 			CreateMenu();
 			fMenuBar->AddItem( fDateSelector );
 			UpdateTargets( fDateSelector );
-			return;
 			break;
 
 		case ( kTodayModified ):
@@ -982,17 +1032,14 @@ void CalendarControl::MessageReceived(BMessage* in) {
 			fDateSelector->Invalidate();			
 			UpdateText();
 			UpdateTargets(fDateSelector);
-			return;
 			break;
 		case ( kReturnToToday ):
 			this->fRepresentedTime = fCalModule->FromTimeTToLocalCalendar( time( NULL ) );			
 			UpdateText();
 			fMenuBar->RemoveItem(fDateSelector);
-//			delete fDateSelector;
 			CreateMenu();
 			fMenuBar->AddItem( fDateSelector );
 			UpdateTargets( fDateSelector );
-			return;
 			break;
 		case (kYearIncreased):
 		case (kYearDecreased):
@@ -1018,11 +1065,9 @@ void CalendarControl::MessageReceived(BMessage* in) {
 			UpdateText();
 //			UpdateYearsMenu(prevYear, fRepresentedTime.tm_year);
 			fMenuBar->RemoveItem(fDateSelector);
-//			delete fDateSelector;
 			CreateMenu();
 			fMenuBar->AddItem(fDateSelector);
 			UpdateTargets(fDateSelector);
-			return;
 			break;
 		case (kMonthDecreased):
 		case (kMonthIncreased):
@@ -1059,22 +1104,62 @@ void CalendarControl::MessageReceived(BMessage* in) {
 			}
 			UpdateText();
 			fMenuBar->RemoveItem(fDateSelector);
-//			delete fDateSelector;
 			CreateMenu();
 			fMenuBar->AddItem(fDateSelector);
 			UpdateTargets(fDateSelector);
-			return;
+			break;
+			
+		case kCalendarModuleChosen:
+			if ( B_OK != in->FindString( "Calendar Module", &sb ) ) {
+				break;
+			}
+			
+			from = fCalModule;
+			to   = utl_FindCalendarModule( sb );
+			
+			if ( !from || !to || from == to || sb == fRepresentedTime.GetCalendarModule() ) {
+				// Nothing to do - user selected the same module
+				break;
+			}
+			
+			// Convert the time representation
+			moment = from->FromLocalCalendarToTimeT( fRepresentedTime );
+			toSet = to->FromTimeTToLocalCalendar( moment );
+			fRepresentedTime = toSet;
+			fRepresentedTime.SetCalendarModule( sb );
+			
+			// Set the new calendar module as control's calendar module
+			fCalModule = to;
+			
+			// Update the preferences
+			ParsePreferences();
+			
+			// Update UI
+			UpdateText();
+			fMenuBar->RemoveItem(fDateSelector);
+			CreateMenu();
+			fMenuBar->AddItem(fDateSelector);
+			UpdateTargets(fDateSelector);
 			break;
 
 		default:
+			dontSendMessage = true;
+			BControl::MessageReceived(in);
 			break;
 	}
+	
+	if ( !dontSendMessage ) {
+		if ( this->Invoke() != B_OK ) {
+//			utl_Deb = new DebuggerPrintout( "Didn't send message!" );	
+		}
+	}
 
-	BControl::MessageReceived(in);
 }
 // <-- end of function CalendarControl::MessageReceived
 
-/*!	
+
+
+/*!	\brief	Update menu of years
  *	\details	After the user selects another year, the whole 
  *				years' menu should be changed. The selected year
  *				becomes the middle of the menu, with years before
@@ -1107,19 +1192,30 @@ void CalendarControl::UpdateYearsMenu(int prevYear, int curYear) {
  *		\param[in]	toSet 	Enable if \em true, disable if \em false.
  */
 void CalendarControl::SetEnabled( bool toSet ) {
-	if ( toSet == bIsControlEnabled ) { return; }	
+	if ( IsEnabled() == toSet ) { return; }
+	BControl::SetEnabled( toSet );
 	
 	rgb_color col;
-	if (toSet) {
-		col = ui_color( B_MENU_ITEM_TEXT_COLOR );
+	
+	if ( toSet ) {
+		if ( this->Parent() ) {
+			col = this->Parent()->HighColor();
+		} else {
+			col = ui_color( B_MENU_ITEM_TEXT_COLOR );
+		}
 	} else {
-		col = ui_color( B_MENU_SELECTION_BACKGROUND_COLOR );
+		col = tint_color( ui_color( B_PANEL_BACKGROUND_COLOR ),
+								B_DISABLED_LABEL_TINT );
 	}
 	
-	this->fDateLabel->SetHighColor(col); 
-	this->fDateLabel->Draw(fDateLabel->Bounds());
-	this->fMenuBar->SetEnabled(toSet);
-	bIsControlEnabled = toSet;
+	this->fDateLabel->SetHighColor( col ); 
+	this->fDateLabel->Invalidate();
+	this->fMenuBar->SetEnabled( toSet );
+	this->fMenuBar->Invalidate();
+	
+	if ( fCalendarModuleSelector ) { fCalendarModuleSelector->SetEnabled( toSet ); }
+	
+	Invalidate();	// Redraw
 }	// <-- end of function CalendarControl::SetEnabled
 
 
@@ -1132,7 +1228,10 @@ status_t		CalendarControl::Invoke( BMessage* in )
 	if ( tempMessage == NULL ) {
 		tempMessage = this->Message();
 		if ( !tempMessage ) {
-			return B_BAD_VALUE;
+			tempMessage = new BMessage( kCalendarControlInvoked );
+			if ( !tempMessage ) {
+				return B_BAD_VALUE;
+			}
 		}
 	}
 	
@@ -1146,6 +1245,7 @@ status_t		CalendarControl::Invoke( BMessage* in )
 	toSend->AddInt32( "Day", ( int32 )fRepresentedTime.tm_mday );
 	toSend->AddInt32( "Month", ( int32 )fRepresentedTime.tm_mon );
 	toSend->AddInt32( "Year", ( int32 )fRepresentedTime.tm_year );
+	toSend->AddString( "Calendar Module", fRepresentedTime.GetCalendarModule() );
 	
 	status_t toReturn = BControl::Invoke( toSend );
 	
@@ -1166,3 +1266,44 @@ void		CalendarControl::SetLabel( const char* label ) {
 	
 	BControl::SetLabel( label );	
 }	// <-- end of function CalendarControl::SetLabel
+
+
+
+/*!	\brief		Creates list of all Calendar Modules in the system.
+ *		\attention	It is assumed that \c global_ListOfCalendarModules is set up
+ *						before constructing this control.
+ */
+BMenu*		CalendarControl::CreateMenuOfCalendarModules()
+{
+	BMenu* toReturn = new BMenu( "Calendar Modules" , B_ITEMS_IN_COLUMN );
+	if ( !toReturn ) { return NULL; }
+	toReturn->SetRadioMode( true );
+	toReturn->SetLabelFromMarked( true );
+	
+	BMenuItem* item;
+	BMessage*  toSend;
+	BString	  tempNameOfModule;
+	CalendarModule* module;
+	
+	// Fill the menu
+	for ( int i = 0; i < NUMBER_OF_CALENDAR_MODULES; ++i ) {
+		module = ( CalendarModule* )global_ListOfCalendarModules.ItemAt( i );
+		
+		if ( !module ) { continue; }
+		tempNameOfModule.SetTo( module->Identify() );
+		
+		toSend = new BMessage( kCalendarModuleChosen );
+		if ( !toSend ) { continue; }
+		toSend->AddString( "Name of calendar module", tempNameOfModule );
+		
+		item = new BMenuItem( tempNameOfModule.String(), toSend );
+		if ( !item ) { continue; }
+		
+		toReturn->AddItem( item );
+		
+		if ( tempNameOfModule == fRepresentedTime.GetCalendarModule() ) {
+			item->SetMarked( true );
+		}
+	}
+	return toReturn;
+}	// <-- end of function CalendarControl::CreateMenuOfCalendarModules

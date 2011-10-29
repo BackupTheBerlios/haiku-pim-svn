@@ -13,6 +13,9 @@
 #include <String.h>
 #include <View.h>
 
+// POSIX includes
+#include <stdio.h>
+
 /*==========================================================================
 **			IMPLEMENTATION OF CLASS TimeHourMinControl
 **========================================================================*/
@@ -77,7 +80,7 @@ void		TimeHourMinControl::UpdateSelectedValuesInMenus( void )
 	// If the clock is 24-hours, then...
 	if ( bUse24hClock ) {
 		// ..the base class version is good enough - it deals the matrix menu good
-		GeneralHourMinControl::UpdateSelectedValuesInMenus();
+		return GeneralHourMinControl::UpdateSelectedValuesInMenus();
 	}
 	
 	// Else, we should write another implemenatation.
@@ -132,6 +135,8 @@ void		TimeHourMinControl::SetEnabled( bool newState )
 	if ( this->IsEnabled() == newState ) {
 		return;
 	}
+	
+	BControl::SetEnabled( newState );
 	
 	if ( fSelectorMenuBar )
 		fSelectorMenuBar->SetEnabled( newState );

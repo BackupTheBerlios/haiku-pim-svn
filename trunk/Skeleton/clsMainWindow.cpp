@@ -17,6 +17,9 @@
 #include "Utilities.h"
 #include "Preferences.h"
 
+#include "ActivityData.h"
+#include "ActivityView.h"
+
 #include <stdio.h>
 
  
@@ -39,6 +42,21 @@ MainView::MainView(BRect frame)
 		utl_Deb = new DebuggerPrintout( "Didn't succeed to parse preferences!" );	
 	}
 	
+	
+	BMessage actDataMess;
+	actDataMess.AddBool( "Notification Enabled", true );
+	actDataMess.AddString( "Notification Text", "Hahhaaha" );
+	
+	actDataMess.AddBool( "Sound Play Enabled", true );
+	actDataMess.AddString( "Sound File Path", "/boot/home/Desktop/" );
+	ActivityData* actData = new ActivityData( &actDataMess );
+	
+	
+	
+	
+	
+	
+	
 	BGroupLayout* layout = new BGroupLayout( B_VERTICAL );
 	if ( !layout ) { 
 		// Panic! 
@@ -49,7 +67,7 @@ MainView::MainView(BRect frame)
 	
 	BRect tempRect = this->Bounds();
 	tempRect.InsetBy(5, 5);
-	tempRect.bottom = tempRect.top+70;
+	tempRect.bottom = tempRect.top+20;
 	
 	
 	
@@ -65,8 +83,11 @@ MainView::MainView(BRect frame)
 		layout->AddView( cont );
 	}
 	
-	tempRect.top = tempRect.bottom + 205;
-	tempRect.bottom = tempRect.top + 70;
+	
+	cont->InitTimeRepresentation( time( NULL ) + 259200 );
+	
+	tempRect.top = tempRect.bottom + 10;
+	tempRect.bottom = tempRect.top + 20;
 	
 	GeneralHourMinControl* ghmControl = new GeneralHourMinControl( tempRect,
 																		"time",
@@ -74,15 +95,12 @@ MainView::MainView(BRect frame)
 																		);
 	if ( !ghmControl ) { exit(1); }
 	
-//	ghmControl->SetMinutesLimit( 38 );
+	ghmControl->SetMinutesLimit( 38 );
 	ghmControl->SetHoursLimit( 72 );
-	
 	layout->AddView( ghmControl );
 	
 	ghmControl->SetCurrentTime( 16, 25 );
-	
 	ghmControl->SetCheckBoxLabel( BString( "A!" ) );
-	
 	ghmControl->SetCheckBoxValue( true );
 
 	BStringView* stringView = new BStringView( BRect( 0, 0, 1, 1 ),
@@ -107,6 +125,17 @@ MainView::MainView(BRect frame)
 	if ( ! timeControl ) { exit(1); }
 	layout->AddView( timeControl );
 	timeControl->SetMessage( toSend );
+	
+	tempRect.top = tempRect.bottom + 10;
+	tempRect.bottom = tempRect.top + 130;
+	ActivityView* nV = new ActivityView( tempRect,
+													  "Activity View",
+														actData );
+	if ( !nV || nV->InitCheck() != B_OK ) {
+		utl_Deb = new DebuggerPrintout( "Couldn't create view!" );
+	}
+	nV->ResizeToPreferred();
+	layout->AddView( nV );
 															
 		
 	AttachedToWindow();
@@ -160,7 +189,7 @@ void MainView::FixupScrollbars()
 clsMainWindow::clsMainWindow(const char *uWindowTitle)
 :
 	BWindow(
-		BRect(64, 64, 320, 560),
+		BRect(64, 64, 500, 560),
 		uWindowTitle,
 		B_TITLED_WINDOW,
 		0	)

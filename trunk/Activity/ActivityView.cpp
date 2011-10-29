@@ -30,7 +30,8 @@ ActivityView::ActivityView( BRect frame,
 	fNotView( NULL ),
 	fSoundView( NULL ),
 	fProgView( NULL ),
-	fLastError( B_OK )
+	fLastError( B_OK ),
+	bIsEnabled( true )
 {
 	BLayoutItem* layoutItem = NULL;
 	BGroupLayout* groupLayout = new BGroupLayout( B_VERTICAL );
@@ -128,5 +129,19 @@ ActivityView::~ActivityView()
 		fProgView->RemoveSelf();
 		delete fProgView;
 	}
-	
 }	// <-- end of destructor for Activity View
+
+
+
+/*!	\brief			Enable or disable the view.
+ */
+void 			ActivityView::SetEnabled( bool toSet )
+{
+	if ( toSet == IsEnabled() ) { return; }
+	bIsEnabled = toSet;
+	
+	if ( fNotView ) fNotView->SetEnabled( toSet );
+	if ( fSoundView ) fSoundView->SetEnabled( toSet );
+	if ( fProgView ) fProgView->SetEnabled( toSet );
+	
+}	// <-- end of function ActivityView::SetEnabled
