@@ -67,6 +67,8 @@ public:
 	
 	inline virtual bool	IsEnabled() const { return bIsEnabled; }
 	virtual void		SetEnabled( bool toSet );
+	
+	virtual	void		SaveData();
 
 protected:
 	// Data placeholders

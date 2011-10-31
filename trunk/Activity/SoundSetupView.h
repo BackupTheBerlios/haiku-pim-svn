@@ -67,6 +67,11 @@ public:
 	
 	inline virtual bool	IsEnabled() const { return bIsEnabled; }
 	virtual void SetEnabled( bool toSet );
+	
+	/*!	\details		This function does nothing - all options are fed to
+	 *						EventData upon selection.
+	 */
+	virtual void SaveData() {};
 					
 protected:
 	// Data placeholders

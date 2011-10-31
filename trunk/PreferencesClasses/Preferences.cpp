@@ -17,6 +17,7 @@
 #include <Path.h>
 #include <File.h>
 #include <FindDirectory.h>
+#include <NodeInfo.h>
 #include <String.h>
 #include <StorageDefs.h>
 
@@ -166,6 +167,10 @@ status_t		pref_SaveAllPreferences( void )
 		utl_Deb = new DebuggerPrintout( sb.String() );
 		return B_ERROR;
 	}
+	
+	BNodeInfo nodeInfo( ( BNode* )&preferencesFile );
+	
+	nodeInfo.SetPreferredApp( kPreferencesPrefletApplicationSignature );
 	
 	/* Close the file */
 	preferencesFile.Unset();

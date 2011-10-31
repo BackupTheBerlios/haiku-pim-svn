@@ -57,8 +57,7 @@ RSRCS=
 #		naming scheme you need to specify the path to the library
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
-LIBS= 	Utilities	\
-		be			\
+LIBS= 	be			\
 		stdc++
 
 #	specify additional paths to directories following the standard
@@ -73,12 +72,14 @@ LIBPATHS= ../lib	\
 #	additional paths to look for system headers
 #	thes use the form: #include <header>
 #	source file directories are NOT auto-included here
-SYSTEM_INCLUDE_PATHS = 
+SYSTEM_INCLUDE_PATHS = /boot/develop/headers/cpp
 
 #	additional paths to look for local headers
 #	thes use the form: #include "header"
 #	source file directories are automatically included
-LOCAL_INCLUDE_PATHS = ../Utilities
+LOCAL_INCLUDE_PATHS = ../Utilities	\
+							 ../CalendarModule	\
+							 ../TimeRepresentation
 
 #	specify the level of optimization that you desire
 #	NONE, SOME, FULL

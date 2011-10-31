@@ -25,7 +25,7 @@ ActivityView::ActivityView( BRect frame,
 	:
 	BView( frame,
 			 name,
-			 B_FOLLOW_LEFT | B_FOLLOW_TOP, 
+			 B_FOLLOW_ALL_SIDES, 
 			 B_WILL_DRAW | B_FRAME_EVENTS | B_PULSE_NEEDED ),
 	fNotView( NULL ),
 	fSoundView( NULL ),

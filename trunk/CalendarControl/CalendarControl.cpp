@@ -62,7 +62,7 @@ CalendarControl::CalendarControl(BRect frame,
 								 BMessage* toSend )
 	:
 	BControl( frame, name, labelInForCalendar.String(), toSend,
-			 B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP_BOTTOM,
+			 B_FOLLOW_ALL_SIDES,
 			 B_NAVIGABLE | B_WILL_DRAW | B_FRAME_EVENTS ),
 	fLabel(NULL),
 	fDateLabel(NULL),

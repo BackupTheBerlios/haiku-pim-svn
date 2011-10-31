@@ -7,7 +7,7 @@
 ## Application Specific Settings ---------------------------------------------
 
 # specify the name of the binary
-NAME= EventEditor
+NAME= Eventual\ Editor
 
 # specify the type of binary
 #	APP:	Application
@@ -39,7 +39,9 @@ SRCS= EventEditorApp.cpp	\
 
 #	specify the resource definition files to use
 #	full path or a relative path to the resource file can be used.
-RDEFS= 
+RDEFS= EventualIcon.rdef	\
+		 EventualEditorIcon.rdef	\
+		 Resources.rdef
 	
 #	specify the resource files to use. 
 #	full path or a relative path to the resource file can be used.
@@ -148,4 +150,4 @@ include $(BUILDHOME)/etc/makefile-engine
 
 
 copy:
-	cp objects.x86-gcc4-release/EventEditor .
+	cp objects.x86-gcc4-release/Eventual\ Editor .

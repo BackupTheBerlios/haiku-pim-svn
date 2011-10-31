@@ -8,7 +8,9 @@
 
 // OS includes
 #include <Alert.h>
+#include <Entry.h>
 #include <Errors.h>
+#include <Roster.h>
 
 // POSIX includes
 #include <string.h>
@@ -100,7 +102,7 @@ void		ActivityData::Instantiate( BMessage* in )
 	if ( ( !in ) || ( ( in->FindString( "Program Command Line Params", &fCommandLineOptions ) ) != B_OK ) )
 	{
 		// If didn't succeed to read the options, it's ok - just assume there were none.
-		fCommandLineOptions.SetTo( "" );	
+		fCommandLineOptions.SetTo( "" );
 	}
 	
 	/* Email sending section */

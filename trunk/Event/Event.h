@@ -19,7 +19,7 @@
 #include "TimeRepresentation.h"
 #include "Utilities.h"
 
-
+const uint32	kSaveRequested = 'SAV!';
 
 /*---------------------------------------------------------------------------
  *					Declaration of enum EventType and corresponding strings
@@ -87,21 +87,22 @@ protected:
 	// General information placeholders
 	BString		fEventName;			//!<  Duh
 	entry_ref*	fEventFile;			/*!<  May be NULL if a new Event is constructed.
-											 *		Used for "Save". */
+											 *		Used for "Save" and "Revert" features. */
 	CalendarModule*	fCalModule;	//!< Calendar module used for creation of this Event.
 	BString		fCategory;			//!< Category of this Event. It \b must be set!
 	BString		fLocation;			//!< Where this Event will occur?
-	bool			bPrivate;			/*!< If \c true - this Event is private. Not used for now,
+	uint32		bPrivate;			/*!< If \c true - this Event is private. Not used for now,
 											 *	  since Haiku is single-user.										*/
-	bool			bVerified;			/*!< If \c true - user has checked this Event's program.
+	uint32		bVerified;			/*!< If \c true - user has checked this Event's program.
 											 *	  Designed to prevent maluse of program running ability.
 											 *	  Not used for now.													*/
 	EventType	fEventType;			//!< See \c enum \c EventType.
-	bool			bLastsWholeDays;	/*!< If true, only start day matters, not time. \c fDuration
+	uint32		bLastsWholeDays;	/*!< If \c true, only start day matters, not time. \c fDuration
 											 *		defines how many whole days the Event lasts, rounding \b up
 											 *		to smallest number of days that can accomodate \c fDuration. */
 	BString		fNote;				//!< User's note (contents of the file).
 
+	time_t		startTime;			//!< Used for "revert" feature
 
 	// When this Event starts, for how long does it last and what does it do.	
 	TimeRepresentation	fStart;	//!< Start time of the first occurrence of the Event.
@@ -110,7 +111,7 @@ protected:
 	
 	// When the Reminder starts, and what does it do.
 	ActivityData		fReminderActivity;		//!< Activity of the Reminder
-	bool		bReminderIsFiredBeforeEvent;		//!< \c true if Reminder starts before Event's start time.
+	uint32	bReminderIsFiredBeforeEvent;		//!< \c true if Reminder starts before Event's start time.
 	time_t	fOffsetBetweenReminderAndEvent;	/*!< Difference in seconds between Reminder and Event.
 															 *   Offset of 0 means Reminder is disabled.		*/
 			
@@ -128,24 +129,24 @@ protected:
 public:
 
 	/* Constructors and destructor */
-
-	EventData();						// Default constructor
-	EventData( time_t in );			// Constructor from seconds
+	EventData( time_t in = 0 );	// Constructor from seconds
 	EventData( const entry_ref& fileIn );	// Constructor from file
 	virtual ~EventData();			// Destructor
 	
 	/* Work with filesystem */
 	virtual void 		InitFromFile( const entry_ref& fileIn );		// Read the object data from file
-	virtual status_t	SaveToFile( entry_ref* fileIn );
-	virtual status_t	SaveToFile( const BPath* pathIn = NULL );
+	virtual status_t	SaveToFile( entry_ref* fileIn = NULL );
+	virtual status_t	SaveToFile( BFile* fileIn );
+	virtual void		Revert();
+	virtual entry_ref*	GetRef() { return fEventFile; }
 
 	/* Setting and getting Event general data */
 	virtual BString	GetCategory() const { return fCategory; }
 	virtual void		SetCategory( const BString& toSet ) { fCategory.SetTo( toSet ); }
 	virtual void		SetCategory( const char* toSet ) { if ( toSet ) fCategory.SetTo( toSet ); }
 	
-	virtual bool		GetPrivate() const { return bPrivate; }
-	virtual void		SetPrivate( bool toSet ) { bPrivate = toSet; }
+	virtual bool		GetPrivate() const { return ( bPrivate != 0 ); }
+	virtual void		SetPrivate( bool toSet ) { bPrivate = ( toSet ? 1 : 0 ); }
 	
 	virtual EventType	GetEventType() const { return fEventType; }
 	virtual status_t	SetEventType( EventType etIn );
@@ -189,16 +190,16 @@ public:
 	virtual ActivityData*	GetReminderActivity() { return &fReminderActivity; }
 	
 	virtual time_t		GetReminderOffset( bool* beforeEventOut ) {
-		if ( beforeEventOut ) { *beforeEventOut = bReminderIsFiredBeforeEvent; }
+		if ( beforeEventOut ) { *beforeEventOut = ( bReminderIsFiredBeforeEvent != 0 ); }
 		return fOffsetBetweenReminderAndEvent;
 	}
 	virtual status_t	SetReminderOffset( time_t newOffset, bool beforeEvent ) {
-		bReminderIsFiredBeforeEvent = beforeEvent;
+		bReminderIsFiredBeforeEvent = ( beforeEvent ? 1 : 0 );
 		fOffsetBetweenReminderAndEvent = newOffset;
 	}
 	
-	virtual bool		GetLastsWholeDays() const { return bLastsWholeDays; }
-	virtual void		SetLastsWholeDays( bool toSet ) { bLastsWholeDays = toSet; }
+	virtual bool		GetLastsWholeDays() const { return ( bLastsWholeDays != 0 ); }
+	virtual void		SetLastsWholeDays( bool toSet ) { bLastsWholeDays = ( toSet ? 1 : 0 ); }
 	
 	/*!	\note
 	 *				Since Note may be quite long, I provide additional method that

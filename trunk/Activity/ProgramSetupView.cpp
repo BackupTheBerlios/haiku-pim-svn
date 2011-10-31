@@ -297,6 +297,7 @@ void			ProgramSetupView::UpdateInitialValues()
 	// as long as the directory is initialized.
 	
 	fFileName->SetText( fileName.String() );
+	fCommandLineOptionsInput->SetText( fCommandLineOptions.String() );
 	
 	if ( enabled ) {
 		fCheckBox->SetValue( 1 );
@@ -410,11 +411,7 @@ void 		ProgramSetupView::MessageReceived( BMessage* in ) {
 		
 		case kProgramActivityCommandLineOptionsChanged:
 		
-			if ( fData && fCommandLineOptionsInput ) {
-				sb = ActivityData::VerifyCommandLineParameters( fCommandLineOptionsInput->Text() );
-				fData->SetProgramOptions( sb );
-				fCommandLineOptionsInput->SetText( sb.String() );
-			}
+			SaveData();
 		
 			break;
 			
@@ -592,3 +589,18 @@ void		ProgramSetupView::SetEnabled( bool toSet )
 		}
 	}	
 }	// <-- end of function ProgramSetupView::SetEnabled
+
+
+
+/*!	\brief		Saves the data to EventData.
+ *		\details		Only command-line options need to be saved, since
+ *						filename and checkbox are updated upon selection.
+ */
+void		ProgramSetupView::SaveData() {
+	BString sb;
+	if ( fData && fCommandLineOptionsInput ) {
+		sb = ActivityData::VerifyCommandLineParameters( fCommandLineOptionsInput->Text() );
+		fData->SetProgramOptions( sb );
+		fCommandLineOptionsInput->SetText( sb.String() );
+	}
+}	// <-- end of function ProgramSetupView::SaveData

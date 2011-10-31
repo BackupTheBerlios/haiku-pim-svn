@@ -61,6 +61,7 @@ class	NotificationView
 		
 		virtual void	SetEnabled( bool toSet );
 		virtual bool	IsEnabled() const { return bIsEnabled; }
+		virtual void	SaveData();
 	
 	protected:
 		// Information holders

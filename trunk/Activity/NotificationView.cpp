@@ -170,6 +170,23 @@ NotificationView::~NotificationView()
 
 
 
+/*!	\brief		Saves data set by the current element into Event's database.
+ */
+void		NotificationView::SaveData()
+{
+	bool checkBoxValue;
+	
+	if ( !fCheckBox ) { checkBoxValue = false; } 
+	else { checkBoxValue = ( fCheckBox->Value() != 0 ); }
+	
+	if ( fData && fTextView ) {
+		fData->SetNotification( checkBoxValue,
+										( fNotificationText.SetTo( fTextView->Text() ) ) );
+	}
+}	// <-- end of function NotificationView::SaveData
+
+
+
 /*!	\brief		Update the label of the text.
  */
 void		NotificationView::SetLabel( const char* toSet )
@@ -213,8 +230,7 @@ void		NotificationView::AttachedToWindow()
 void		NotificationView::Pulse( void )
 {
 	if ( fData ) {
-		fData->SetNotification( ( fCheckBox->Value() != 0 ),
-										( fNotificationText.SetTo( fTextView->Text() ) ) );
+		
 	}
 	BView::Pulse();
 }	// <-- end of function NotificationView::Draw

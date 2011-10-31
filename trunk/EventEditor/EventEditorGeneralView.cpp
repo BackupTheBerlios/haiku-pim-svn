@@ -74,15 +74,6 @@ EventEditor_GeneralView::EventEditor_GeneralView( BRect frame, EventData* data )
 	fStartTime = fData->GetStartTime();
 	fCalModule = utl_FindCalendarModule( fStartTime.GetCalendarModule() );
 	
-	
-	printf( "Start time = %02d:%02d, %02d %02d %04d\n",
-			  fStartTime.tm_hour,
-			  fStartTime.tm_min,
-			  fStartTime.tm_mday,
-			  fStartTime.tm_mon,
-			  fStartTime.tm_year );
-	
-	
 	if ( !fCalModule ) {
 		/* Panic! */
 		_LastError = B_BAD_VALUE;
@@ -117,7 +108,8 @@ EventEditor_GeneralView::EventEditor_GeneralView( BRect frame, EventData* data )
 	// Create field for Event name label
 	BStringView* eventNameLabel = new BStringView( BRect( 0, 0, 1, 1 ),
 																  "Event name label",
-																  "Event name:" );	// Label
+																  "Event name:",
+																  B_FOLLOW_LEFT | B_FOLLOW_TOP );	// Label
 	if ( !eventNameLabel ) {
 		/* Panic! */
 		_LastError = B_NO_MEMORY;
@@ -134,7 +126,8 @@ EventEditor_GeneralView::EventEditor_GeneralView( BRect frame, EventData* data )
 											 "Event name text control",
 											 NULL,		// Label
 											 fData->GetEventName().String(),
-											 toSend );
+											 toSend, 
+											 B_FOLLOW_LEFT | B_FOLLOW_TOP );
 	if ( !_EventName ) {
 		/* Panic! */
 		_LastError = B_NO_MEMORY;
@@ -166,7 +159,8 @@ EventEditor_GeneralView::EventEditor_GeneralView( BRect frame, EventData* data )
 	// Create label for the Event location
 	BStringView* locationLabel = new BStringView( BRect( 0, 0, 1, 1 ),
 																 "Event location label",
-																 "Event location:" );		// Label
+																 "Event location:",	// Label
+																 B_FOLLOW_LEFT | B_FOLLOW_TOP );
 	if ( ! locationLabel ) {
 		/* Panic! */
 		_LastError = B_NO_MEMORY;
@@ -183,7 +177,8 @@ EventEditor_GeneralView::EventEditor_GeneralView( BRect frame, EventData* data )
 											 "Event location text control",
 											 NULL,
 											 fData->GetEventLocation().String(),
-											 toSend );
+											 toSend,
+											 B_FOLLOW_LEFT | B_FOLLOW_TOP );
 	if ( !_Location ) {
 		/* Panic! */
 		_LastError = B_NO_MEMORY;
@@ -235,7 +230,8 @@ EventEditor_GeneralView::EventEditor_GeneralView( BRect frame, EventData* data )
 	 *-----------------------------*/
 	BStringView* menuStringView = new BStringView( BRect( 0, 0, 1, 1 ),
 																  "Category menu explanation",
-																  "Category:" );
+																  "Category:",
+																  B_FOLLOW_LEFT | B_FOLLOW_TOP );
 	if ( !menuStringView ) {
 		/* Panic! */
 		_LastError = B_NO_MEMORY;
@@ -282,7 +278,9 @@ EventEditor_GeneralView::EventEditor_GeneralView( BRect frame, EventData* data )
 	/*------------------------------
 	 *  	Separator field
 	 *-----------------------------*/
-	BBox* separatorBox = new BBox( BRect( 0, 0, Bounds().Width() - 15, 1 ), "Separator Box" );
+	BBox* separatorBox = new BBox( BRect( 0, 0, Bounds().Width() - 15, 1 ), 
+											 "Separator Box",
+											 B_FOLLOW_LEFT | B_FOLLOW_TOP );
 	if ( separatorBox ) {
 		layoutItem = gridLayout->AddView( separatorBox, 0, 3, 3, 1 );
 		BSize size( Bounds().Width() - 15, 1 );
@@ -536,6 +534,7 @@ void		EventEditor_GeneralView::MessageReceived( BMessage* in )
 	uint32	tempUint32_1, tempUint32_2;
 	bool	tempBool;
 	CalendarModule* startCM, *endCM;
+	CategoryMenuItem* item;
 	
 	switch( in->what )
 	{
@@ -642,7 +641,6 @@ void		EventEditor_GeneralView::MessageReceived( BMessage* in )
 				_EndDateControl->InitTimeRepresentation( fEndTime );
 				_EndTimeHourMinControl->SetCurrentTime( fEndTime );
 				
-//				SetCorrectDuration();
 				SetEnabledStateOfEndTimeBox();
 				UpdateDurationLengthLabel( false );
 			}
@@ -765,9 +763,26 @@ void		EventEditor_GeneralView::MessageReceived( BMessage* in )
 				_StartDateControl->InitTimeRepresentation( fStartTime );
 				_StartDateControl->Invalidate();
 			}
-			
-//			SetCorrectDuration();
 			UpdateDurationLengthLabel();
+			
+			break;
+		
+		case kSaveRequested:
+			// Main data parts required to save are:
+			// Name, location and category.
+			// Other data parts are updated constantly anyway.
+			if ( _EventName ) fData->SetEventName( _EventName->Text() );
+			if ( _Location )  fData->SetEventLocation( _Location->Text() );
+			if ( _CategoryMenu ) {
+				if ( ( item = ( CategoryMenuItem* )_CategoryMenu->FindMarked() ) == NULL )
+				{
+					fData->SetCategory( "Default" );
+				}
+				else
+				{
+					fData->SetCategory( item->GetLabel() );
+				}
+			}
 			
 			break;
 		
@@ -1097,13 +1112,6 @@ void			EventEditor_GeneralView::SetCorrectDuration()
 			fDuration = 0;
 		} else {
 			fDuration = fPreviousDuration;
-/*			if ( false == VerifyEndTimeIsGreaterThenStart( fStartTime, fEndTime, &fDuration ) )
-			{
-				fDuration = 0;
-			} else {
-				fDuration = endCM->FromLocalCalendarToTimeT( fEndTime ) - startCM->FromLocalCalendarToTimeT( fStartTime );
-			}
-*/
 		}
 	}
 	fData->SetDuration( fDuration );

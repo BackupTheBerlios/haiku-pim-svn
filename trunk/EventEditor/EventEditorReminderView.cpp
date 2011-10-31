@@ -36,7 +36,7 @@ EventEditor_ReminderView::EventEditor_ReminderView( BRect rect, EventData* data 
 	:
 	BView( rect,
 			 "Reminder Activity",
-			 B_FOLLOW_LEFT | B_FOLLOW_TOP,
+			 B_FOLLOW_ALL,
 			 B_WILL_DRAW | B_FRAME_EVENTS | B_PULSE_NEEDED ),
 	fData( data ),
 	fLastError( B_OK ),
@@ -202,6 +202,10 @@ void		EventEditor_ReminderView::MessageReceived( BMessage* in )
 														NULL,
 														&tempBool );
 			fData->SetReminderOffset( 60 * ( 60 * fHours + fMinutes ), tempBool );
+			break;
+		
+		case kSaveRequested:
+			fActivityView->SaveData();
 			break;
 		
 		default:

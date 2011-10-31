@@ -28,7 +28,8 @@ class EventEditor_NoteView
 		
 		virtual void 		Pulse();
 		virtual status_t	InitCheck() const { return fLastError; }
-		
+		virtual void		FrameResized( float width, float height );
+		virtual void		SaveText();
 		
 	protected:
 		// Information placeholders

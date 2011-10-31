@@ -4,12 +4,17 @@
  */
 
 // OS includes
+#include <Entry.h>
 #include <SupportDefs.h>
+#include <String.h>
 
 // Project includes
 #include "EventEditorApp.h"
 #include "Utilities.h"
 #include "Preferences.h"
+
+// POSIX includes
+#include <time.h>
 
 
 /*!	\brief		Constructor for the Event Editor application.
@@ -26,7 +31,7 @@
  */
 EventEditorApplication::EventEditorApplication( int argc, char* argv[] )
 	:
-	BApplication(ApplicationSignature),
+	BApplication( kEventEditorApplicationSignature ),
 	fMainWindow( NULL )
 {
 	GregorianCalendar* gregorianCalMod = new GregorianCalendar();
@@ -39,17 +44,6 @@ EventEditorApplication::EventEditorApplication( int argc, char* argv[] )
 	}
 	
 	utl_RegisterFileType();
-	
-	
-	fMainWindow = new EventEditorMainWindow();
-	if ( fMainWindow != NULL )
-	{
-  		fMainWindow->Show();
-	}
-	else
-	{
-		be_app->PostMessage( B_QUIT_REQUESTED );
-	}
 }	// <-- end of constructor for EventEditorApplication
 
 
@@ -71,6 +65,18 @@ EventEditorApplication::~EventEditorApplication()
  */
 void EventEditorApplication::ReadyToRun()
 {
+	if ( !fMainWindow ) {
+		
+		fMainWindow = new EventEditorMainWindow();
+		if ( fMainWindow != NULL )
+		{
+	  		fMainWindow->Show();
+		}
+		else
+		{
+			be_app->PostMessage( B_QUIT_REQUESTED );
+		}
+	}
 }
 
 void EventEditorApplication::Pulse()
@@ -80,10 +86,44 @@ void EventEditorApplication::Pulse()
 
 
 
-/*!	\brief
+/*!	\brief		Load the parameters
  */
 void			EventEditorApplication::ArgvReceived( int32 argc, char* argv[] )
 {
+	time_t SecondsFromStart;
+	BString sb;
 	
+		// The parameter is interesting if it's a number or if it's a path to file.
+	time_t toStart;
 	
+	BEntry entry( argv[ 1 ] );
+	if ( ( entry.InitCheck() == B_OK ) && 
+		  ( entry.Exists() ) )
+	{
+		entry.Unset();
+		
+		fMainWindow = new EventEditorMainWindow( BString( argv[ 1 ] ) );
+		if ( fMainWindow != NULL )
+		{
+	  		fMainWindow->Show();
+		}
+		else
+		{
+			be_app->PostMessage( B_QUIT_REQUESTED );
+		}
+	}
+	else 
+	{
+		toStart = ( time_t )atoi( argv[ 1 ] );
+		
+		fMainWindow = new EventEditorMainWindow( toStart );
+		if ( fMainWindow != NULL )
+		{
+	  		fMainWindow->Show();
+		}
+		else
+		{
+			be_app->PostMessage( B_QUIT_REQUESTED );
+		}
+	}	
 }	// <-- end of function EventEditorApplication::ArgvReceived

@@ -83,7 +83,7 @@ public:
 	}
 	
 	// Getters and setters for the program
-	inline virtual void	SetProgram( bool toSet ) { bProgramRun = toSet; printf( "Enabled = %s.\n", toSet ? "true" : "false" ); }
+	inline virtual void	SetProgram( bool toSet ) { bProgramRun = toSet; }
 	inline virtual void	SetProgram( bool toSet, const BPath& pathIn ) {
 		bProgramRun = toSet; fProgramPath = pathIn;
 	}
@@ -91,15 +91,9 @@ public:
 		bProgramRun = toSet; fProgramPath = pathIn; fCommandLineOptions = paramsIn;
 	}
 	inline virtual void	SetProgramPath( const BPath& pathIn ) {
-		
-		printf( "Program path is %s.\n", pathIn.Path() );
-		
 		fProgramPath = pathIn;
 	}
 	inline virtual void	SetProgramOptions( const BString& paramsIn ) {
-		
-		printf( "Program options are: %s.\n", paramsIn.String() );
-		
 		fCommandLineOptions = paramsIn;
 	}
 	inline virtual bool	GetProgram( BPath* pathOut = NULL, BString* paramsOut = NULL ) const {

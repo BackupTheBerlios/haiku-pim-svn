@@ -84,7 +84,7 @@ EventEditor_NoteView::EventEditor_NoteView( BRect frame, EventData* data )
 		fLastError = B_NO_MEMORY;
 		return;
 	}
-	fTextView->SetText( ( fData->GetNoteText() ).String() );
+	fTextView->SetText( fData->GetNoteText().String() );
 
 	fScroller = new BScrollView( "Scroller",
 										  fTextView,
@@ -108,8 +108,8 @@ EventEditor_NoteView::EventEditor_NoteView( BRect frame, EventData* data )
 EventEditor_NoteView::~EventEditor_NoteView()
 {
 	if ( fTextView ) {
-		if ( fData )
-			fData->SetNoteText( fTextView->Text() );
+//		if ( fData )
+//			fData->SetNoteText( fTextView->Text() );
 			
 		fTextView->RemoveSelf();
 		delete fTextView;
@@ -140,9 +140,7 @@ EventEditor_NoteView::~EventEditor_NoteView()
 void		EventEditor_NoteView::Pulse() {
 	static uint counter = 1;
 	if ( ( counter % 4 ) == 0 ) {
-		if ( fTextView && fData ) {
-			fData->SetNoteText( fTextView->Text() );
-		}
+//		SaveText();
 		counter = 1;
 	}
 	else
@@ -150,3 +148,30 @@ void		EventEditor_NoteView::Pulse() {
 		++counter;
 	}
 }	// <-- end of function EventEditor_NoteView::Pulse
+
+
+
+/*!	\brief		Actually save the data into the Event.
+ */
+void		EventEditor_NoteView::SaveText()
+{
+	if ( fTextView && fData ) {
+		fData->SetNoteText( fTextView->Text() );
+	}
+}	// <-- end of function EventEditor_NoteView::SaveText
+
+
+/*!	\brief		Updating the window to the new size.
+ *		\details		Main task is to change the text rectangle size in the text view.
+ */
+void		EventEditor_NoteView::FrameResized( float newWidth, float newHeight )
+{
+	BView::FrameResized( newWidth, newHeight );
+	
+	if ( fTextView ) {
+		BRect textViewRect = fTextView->Bounds();
+		textViewRect.InsetBy( 3, 3 );
+		fTextView->SetTextRect( textViewRect );
+	}	
+	
+}	// <-- end of EventEditor_NoteView::FrameResized

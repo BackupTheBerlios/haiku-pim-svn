@@ -30,8 +30,13 @@ public:
 	// UI-related functions
 	virtual void	AttachedToWindow();
 	
-	// Set the Activity Data
-//	virtual void	SetActivityData( ActivityData* toSet );
+	// Save the Activity Data
+	virtual void	SaveData() {
+		if ( fNotView ) { fNotView->SaveData(); }
+		if ( fSoundView ) { fSoundView->SaveData(); }
+		if ( fProgView ) { fProgView->SaveData(); }	
+	}
+	
 	// Get the Activity Data
 	inline virtual ActivityData*	GetActivityData( void ) const { return fData; }
 	

@@ -8,9 +8,13 @@
 #include "CalendarModule.h"
 #include "Event.h"
 #include "Preferences.h"
+#include "Utilities.h"
 
 // OS includes
 #include <Message.h>
+#include <File.h>
+#include <NodeInfo.h>
+#include <SupportDefs.h>
 #include <fs_attr.h>
 
 // POSIX includes
@@ -43,19 +47,18 @@ EventData::~EventData() {
 }	// <-- end of destructor
 
 
-/*!	\brief		Default constructor
- */
-EventData::EventData() {
-	_InitDefaults();	
-}	// <-- end of default constructor
-
-
 
 /*!	\brief		Constructor from time_t
  */
-EventData::EventData( time_t startingTime ) {
+EventData::EventData( time_t startingTime )
+	:
+	fEventFile( NULL )
+{
 	_InitDefaults();
-	fStart = fCalModule->FromTimeTToLocalCalendar( startingTime );
+	startTime = startingTime;	// Save the time for "Revert" feature
+	if ( startingTime != 0 ) {
+		fStart = fCalModule->FromTimeTToLocalCalendar( startingTime );
+	}
 }	// <-- end of constructor from time_t
 
 
@@ -64,10 +67,29 @@ EventData::EventData( time_t startingTime ) {
  *		\param[in]	fileIn 	Reference to the file
  */
 EventData::EventData( const entry_ref& fileIn )
+	:
+	fEventFile( NULL )
 {
 	_InitDefaults();
 	InitFromFile( fileIn );
 }
+
+
+
+/*!	\brief		Reset the Event Data to previously saved version.
+ *		\details		If there was no previously saved version - just clear everything.
+ */
+void		EventData::Revert( void )
+{
+	_InitDefaults();
+	if ( fEventFile != NULL ) {
+		InitFromFile( *fEventFile );
+	} else {
+		if ( startTime != 0 ) {
+			fStart = fCalModule->FromTimeTToLocalCalendar( startTime );
+		}
+	}
+}	// <-- end of function EventData::Revert()
 
 
 /*!	\brief		Set data structures to their default values.
@@ -82,7 +104,7 @@ void 		EventData::_InitDefaults()
 	int hours, mins;
 	
 	fEventName.SetTo( "" );
-	fEventFile = NULL;
+//	fEventFile = NULL;
 	fCategory.SetTo( "Default" );		// This category surely exists
 	bPrivate = false;						// This data member is not used
 	bVerified = true;						// This data member is not used too
@@ -142,8 +164,9 @@ void 		EventData::_InitDefaults()
 	fAndRules.MakeEmpty();
 	fNotRules.MakeEmpty();
 	
-	// Both reminder activity and event activity are initialized to empty -
-	// no need to touch them
+	// Clear reminder activity and event activity
+	fEventActivity.Instantiate( NULL );
+	fReminderActivity.Instantiate( NULL );
 
 	// Initializing the Note to nothing
 	fNote.SetTo( "" );
@@ -174,9 +197,10 @@ void		EventData::InitFromFile( const entry_ref& fileIn )
 	
 	// Temporary variables for reading the data
 	uint32		tempUint32;
-	uint64		tempUint64;
 	BMessage		tempMessage;
 	size_t		tempSize = 0;
+	
+	_InitDefaults();
 	
 	// Save the entry_ref parameter into the data structure
 	// The entry_ref is copied, not adopted.
@@ -189,21 +213,19 @@ void		EventData::InitFromFile( const entry_ref& fileIn )
 	void*			placeholder = NULL;
 	
 	status_t		status = B_OK;
-	
-	_InitDefaults();
-	
-	BFile* file = NULL;
-	file->SetTo( &fileIn, B_READ_ONLY );
-	if ( !file || file->InitCheck() != B_OK )
+		
+	BFile file;
+	file.SetTo( &fileIn, B_READ_ONLY );
+	if ( file.InitCheck() != B_OK )
 	{
-			return;
+		return;
 	}
 	
 	/* Here, "file" is set, and the file is opened for reading.
 	 */
 	
 	// Lock the node to prevent tampering with its attributes while I'm reading
-	if ( B_OK == file->Lock() ) {
+	if ( B_OK == file.Lock() ) {
 		bLocked = true;
 	}
 	
@@ -212,40 +234,37 @@ void		EventData::InitFromFile( const entry_ref& fileIn )
 	// Reading attributes is performed in the infinite loop.
 	// Breaking out of the loop when all attributes were read.
 	while ( true ) {
-		if ( ( ( status = file->GetNextAttrName( nameBuffer ) ) == B_ENTRY_NOT_FOUND ) ||
+		if ( ( ( status = file.GetNextAttrName( nameBuffer ) ) == B_ENTRY_NOT_FOUND ) ||
 		 	  ( status == B_FILE_ERROR ) )
 		{
 			break;
 		}
 		
 		// Allocating memory for reading the attribute
-		if ( file->GetAttrInfo( nameBuffer, &ai ) == B_OK )
+		if ( file.GetAttrInfo( nameBuffer, &ai ) == B_OK )
 		{
 			// Maybe it's a constant-length type, and we have a placeholder for it.
-			if ( ai.size == sizeof( uint32 ) )
+			if ( ( ai.size <= sizeof( uint32 ) ) && ( ai.type != B_STRING_TYPE ) )
 			{
 				placeholder = ( void* )&tempUint32;
-			}
-			else if ( ai.size == sizeof( uint64 ) )
-			{
-				placeholder = ( void* )&tempUint64;
+				tempSize = sizeof( uint32 );
 			}
 			else
 			{
 				// No placeholder suits the data.
 				// Allocate new buffer for the attribute's data, but
 				// only in case we actually need it
-				if ( bufferSize < ( uint32 )ai.size ) {
-					bufferSize = ( uint32 )ai.size;
-					delete buffer;	// Clearing the old buffer
-				 	buffer = new uint8[ bufferSize ];
-				 	if ( !buffer ) {
-				 		// Did not succeed to allocate buffer - unlock and exit.
-				 		if ( bLocked ) { file->Unlock(); }
-						file->Unset();	// Close the file.
-				 		return;
-				 	}
+				if ( buffer )
+					delete []buffer;	// Clearing the old buffer
+				buffer = new uint8[ ai.size + 1 ];
+				if ( !buffer ) {
+					// Did not succeed to allocate buffer - unlock and exit.
+					if ( bLocked ) { file.Unlock(); }
+				   file.Unset();	// Close the file.
+					return;
 				}
+					
+				tempSize = ( size_t )ai.size;			
 				
 				placeholder = ( void* )buffer;
 			}
@@ -256,16 +275,13 @@ void		EventData::InitFromFile( const entry_ref& fileIn )
 			continue;
 		}
 		
+		memset( buffer, 0, ai.size + 1 );
+		
 		// Read the attribute
-		if ( file->ReadAttr( nameBuffer, ai.type, 0, placeholder, bufferSize ) != B_OK )
-		{
-			// Did not succeed to read the attribute - continuing to next attribute.
-			continue;
-		}
+		tempSize = file.ReadAttr( nameBuffer, ai.type, 0, placeholder, ai.size );
 		
 		/* Ok, the attribute was read successfully. What is it?
 		 */
-		
 		if ( strcmp( nameBuffer, "EVNT:name" ) == 0 )
 		{
 			// It is the Event name
@@ -277,7 +293,7 @@ void		EventData::InitFromFile( const entry_ref& fileIn )
 			fCategory.SetTo( ( char* )buffer );
 			continue;
 		}
-		else if ( strcmp( nameBuffer, "EVNT:location" ) == 0 )
+		else if ( strcmp( nameBuffer, "EVNT:where" ) == 0 )
 		{
 			fLocation.SetTo( ( char* )buffer );
 			continue;
@@ -309,7 +325,7 @@ void		EventData::InitFromFile( const entry_ref& fileIn )
 		}
 		else if ( strcmp( nameBuffer, "EVNT:next_occurrence" ) == 0 )
 		{
-			fNextOccurrence = ( time_t )tempUint64;
+			fNextOccurrence = ( time_t )tempUint32;
 			continue;
 		}
 		else if ( strcmp( nameBuffer, "EVNT:and_rules" ) == 0 )
@@ -325,14 +341,14 @@ void		EventData::InitFromFile( const entry_ref& fileIn )
 		else if ( strcmp( nameBuffer, "EVNT:start_TR" ) == 0 )
 		{
 			tempMessage.MakeEmpty();
-			tempMessage.Unflatten( ( char* )buffer );
+			tempMessage.Unflatten( ( char* )placeholder );
 			fStart.Unarchive( &tempMessage );
 			continue;
 		}
 		else if ( strcmp( nameBuffer, "EVNT:event_activity" ) == 0 )
 		{
 			tempMessage.MakeEmpty();
-			tempMessage.Unflatten( ( char* )buffer );
+			tempMessage.Unflatten( ( char* )placeholder );
 			fEventActivity.Instantiate( &tempMessage );
 			continue;
 		}
@@ -340,18 +356,18 @@ void		EventData::InitFromFile( const entry_ref& fileIn )
 		{
 			fOffsetBetweenReminderAndEvent = ( time_t )abs( ( time_t )tempUint32 );
 			if ( tempUint32 < 0 ) {
-				bReminderIsFiredBeforeEvent = false;
+				bReminderIsFiredBeforeEvent = 0;
 			}
 			else
 			{
-				bReminderIsFiredBeforeEvent = true;
+				bReminderIsFiredBeforeEvent = 1;
 			}
 			continue;
 		}
 		else if ( strcmp( nameBuffer, "EVNT:reminder_activity" ) == 0 )
 		{
 			tempMessage.MakeEmpty();
-			tempMessage.Unflatten( ( char* )buffer );
+			tempMessage.Unflatten( ( char* )placeholder );
 			fReminderActivity.Instantiate( &tempMessage );
 			continue;
 		}
@@ -375,14 +391,22 @@ void		EventData::InitFromFile( const entry_ref& fileIn )
 	 */
 	
 	// Now, last thing we should do is read the note.
+	BString note;
 	do {
 		memset( nameBuffer, 0, B_ATTR_NAME_LENGTH );
-		tempSize = file->Read( ( void* )nameBuffer, B_ATTR_NAME_LENGTH );
-		fNote.Append( nameBuffer, tempSize );
-	} while( B_ATTR_NAME_LENGTH == tempSize );	
+		tempSize = file.Read( ( void* )nameBuffer, B_ATTR_NAME_LENGTH-1 );
+		if ( tempSize < 0 ) {
+			utl_Deb = new DebuggerPrintout( "Didn't succeed to read file's data!" );
+		} else {
+			nameBuffer[ tempSize ] = 0;
+			note.Append( ( char* )nameBuffer );
+		}
+	} while( tempSize > 0 );	
 	
-	if ( bLocked ) { file->Unlock(); }
-	file->Unset();	// Close the file.	
+	SetNoteText( note );
+	
+	if ( bLocked ) { file.Unlock(); }
+	file.Unset();	// Close the file.	
 }	// <-- end of function EventData::InitFromFile
 
 
@@ -393,7 +417,22 @@ void		EventData::InitFromFile( const entry_ref& fileIn )
  */
 status_t		EventData::SaveToFile( entry_ref* fileIn )
 {
-	if ( fileIn == NULL ) { fileIn = fEventFile; }
+	entry_ref* newRef;
+	
+	if ( fileIn == NULL ) {
+		fileIn = fEventFile;
+	} 
+	else
+	{ 
+		newRef = new entry_ref( *fileIn );
+		if ( !newRef ) {
+			return B_NO_MEMORY;	
+		}
+		if ( fEventFile )
+			delete this->fEventFile;
+		fEventFile = newRef;
+		fileIn = newRef;
+	}
 	if ( fileIn == NULL ) { return B_ENTRY_NOT_FOUND; }
 	BFile file( fileIn, B_WRITE_ONLY | B_CREATE_FILE | B_ERASE_FILE );
 	status_t toReturn = _SaveToFile( &file );
@@ -406,14 +445,18 @@ status_t		EventData::SaveToFile( entry_ref* fileIn )
 /*!	\brief		Saving the Event data into file.
  *		\details		This function is a gateway for another, private function,
  *						that actually performs saving.
- *		\param[in]	pathIn 		Path to the file.
+ *		\param[in]	fileIn 		Pointer to the (previously opened) file.
  */
-status_t		EventData::SaveToFile( const BPath *pathIn )
+status_t		EventData::SaveToFile( BFile *fileIn )
 {
-	if ( ! pathIn ) { return B_NAME_NOT_FOUND; }
-	BFile file( pathIn->Path(), B_WRITE_ONLY | B_CREATE_FILE | B_ERASE_FILE );
-	status_t toReturn = _SaveToFile( &file );
-	file.Unset();
+	if ( !fileIn ) { return B_NAME_NOT_FOUND; }
+	if ( ( fileIn->InitCheck() != B_OK ) ||
+	     ( !fileIn->IsWritable() ) )
+	{
+		return B_BAD_VALUE;
+	}
+	status_t toReturn = _SaveToFile( fileIn );
+	fileIn->Unset();		// Close the file
 	return toReturn;
 }	// <-- end of function EventData::SaveToFile
 	
@@ -424,13 +467,13 @@ status_t		EventData::_SaveToFile( BFile* file )
 {
 	BMessage tempMessage;
 	uint8		*buffer;
-	uint64	tempUint64;
 	uint32	tempUint32 = 0;
 	bool		tempBool = true;		// For creating "verified" attribute
 	status_t	status 	= B_OK;
 	bool		bLocked 	= false;
 	ssize_t	size = 0;
 	time_t	currentMoment = time( NULL );
+	BNodeInfo		nodeInfo;
 	
 	if ( !file || ( status = file->InitCheck() ) != B_OK )
 	{
@@ -467,39 +510,22 @@ status_t		EventData::_SaveToFile( BFile* file )
 	fNextOccurrence = fCalModule->FromLocalCalendarToTimeT( toSave );
 	
 	// Next occurrence
-	file->WriteAttr( "EVNT:next_occurrence", 	B_UINT64_TYPE,	0, ( uint64* )&fNextOccurrence,	sizeof( uint64 ) );
+	file->WriteAttr( "EVNT:next_occurrence", 	B_UINT32_TYPE,	0, ( uint32* )&fNextOccurrence,	sizeof( uint32 ) );
 		
 	// Calculate next reminder
-	tempUint64 = ( uint64 )fNextOccurrence + ( bReminderIsFiredBeforeEvent ? ( -1 ) : 1 ) * ( uint64 )fOffsetBetweenReminderAndEvent;
+	tempUint32 = ( uint32 )fNextOccurrence + ( bReminderIsFiredBeforeEvent ? ( -1 ) : 1 ) * ( uint32 )fOffsetBetweenReminderAndEvent;
 	
-	file->WriteAttr( "EVNT:name", 					B_STRING_TYPE,	0, fEventName.String(),				sizeof( fEventName.String() ) );
-	file->WriteAttr( "EVNT:category",				B_STRING_TYPE,	0, fCategory.String(),				sizeof( fCategory.String() ) );
-	file->WriteAttr( "EVNT:where", 				B_STRING_TYPE,	0, fLocation.String(),				sizeof( fLocation.String() ) );
-	file->WriteAttr( "EVNT:private", 				B_INT32_TYPE,	0, ( int32* )&bPrivate,				sizeof( int32 ) );
-	file->WriteAttr( "EVNT:verified",				B_INT32_TYPE,	0, ( int32* )&tempBool,				sizeof( int32 ) );
+	file->WriteAttr( "EVNT:name", 				B_STRING_TYPE,	0, fEventName.String(),				fEventName.Length() );
+	file->WriteAttr( "EVNT:category",			B_STRING_TYPE,	0, fCategory.String(),				fCategory.Length() );
+	file->WriteAttr( "EVNT:where", 				B_STRING_TYPE,	0, fLocation.String(),				fLocation.Length() );
+	file->WriteAttr( "EVNT:private", 			B_INT32_TYPE,	0, ( int32* )&bPrivate,				sizeof( int32 ) );
+	file->WriteAttr( "EVNT:verified",			B_INT32_TYPE,	0, ( int32* )&tempBool,				sizeof( int32 ) );
 	file->WriteAttr( "EVNT:type",	 				B_INT32_TYPE,	0, ( int32* )&fEventType,			sizeof( int32 ) );
 	file->WriteAttr( "EVNT:reminder_offset",	B_UINT32_TYPE, 0, ( uint32* )&fOffsetBetweenReminderAndEvent, sizeof( uint32 ) );
-	file->WriteAttr( "EVNT:next_reminder",		B_UINT64_TYPE, 0, ( uint64* )&tempUint64, 		sizeof( uint64 ) );
+	file->WriteAttr( "EVNT:next_reminder",		B_UINT32_TYPE, 0, ( uint32* )&tempUint32, 		sizeof( uint32 ) );
 	
 	// Duration
-	if ( bLastsWholeDays ) {
-		// Saved duration should be the integer number of days that is large enough
-		// to include the duration set by user.
-		if ( fDuration == 0 ) {
-			tempUint32 = 60 * 60 * 24;		// One day only
-		} else {
-			int64 tempInt64 = ( int64 )fDuration;
-			while ( tempInt64 > 0 ) {
-				tempUint32 += 60 * 60 * 24;
-				tempInt64 -=  60 * 60 * 24;
-			}
-		}
-		file->WriteAttr( "EVNT:duration", B_UINT32_TYPE,	0, ( uint32* )&tempUint32, sizeof( uint32 ) );
-	}
-	else
-	{
-		file->WriteAttr( "EVNT:duration",	B_UINT32_TYPE,	0, ( uint32* )&fDuration, sizeof( uint32 ) );
-	}
+	file->WriteAttr( "EVNT:duration", B_UINT32_TYPE,	0, ( uint32* )&fDuration, sizeof( uint32 ) );	
 	
 	// "And" rules
 	tempMessage.MakeEmpty();
@@ -512,7 +538,7 @@ status_t		EventData::_SaveToFile( BFile* file )
 			if ( status == B_OK ) {
 				file->WriteAttr( "EVNT:and_rules", B_RAW_TYPE,	0, buffer, size );
 			}
-			delete buffer;
+			delete [] buffer;
 			buffer = NULL;
 		}
 	}
@@ -537,7 +563,7 @@ status_t		EventData::_SaveToFile( BFile* file )
 	
 	// Calendar module
 	if ( fCalModule ) {
-		file->WriteAttr( "EVNT:cal_module", B_STRING_TYPE, 0, fCalModule->Identify().String(), sizeof( fCalModule->Identify().String() ) );
+		file->WriteAttr( "EVNT:cal_module", B_STRING_TYPE, 0, fCalModule->Identify().String(), fCalModule->Identify().Length() );
 	}
 	
 	// Event activity
@@ -581,6 +607,16 @@ status_t		EventData::_SaveToFile( BFile* file )
 	// Does the Event lasts full days?
 	file->WriteAttr( "EVNT:whole_day",		B_INT32_TYPE, 0, &bLastsWholeDays, sizeof( int32 ) );
 
+
+	// Adding some general attributes
+	if ( B_OK == nodeInfo.SetTo( file ) )
+	{
+		nodeInfo.SetType( kEventFileMIMEType );
+		nodeInfo.SetPreferredApp( kEventEditorApplicationSignature, B_OPEN );
+	}
+	
+	// Saving the note
+	file->Write( fNote.String(), fNote.Length() );
 
 	// Unlock the node before exit
 	if ( bLocked ) {

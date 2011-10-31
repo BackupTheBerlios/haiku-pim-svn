@@ -201,7 +201,7 @@ bool	MergeCategories( BString& source, BString& target )
 							  AttributesArray[ i ].type,	// Supposedly, B_STRING_TYPE
 							  0,
 							  target.String(),
-							 ( sizeof( target.String() ) > 255 ) ? 255 : sizeof( target.String() ) );
+							  target.Length() );
 		
 		/* Actually, the return value is not needed.
 		 * In any case we're continuing to a next item.
@@ -236,10 +236,6 @@ void		DeleteCategoryFromGlobalList( const BString& toDelete )
 			continue;
 		
 		if ( toDelete == underTesting->categoryName ) {
-			sb.SetTo( "Found category to delete at position " );
-			sb << i;
-			utl_Deb = new DebuggerPrintout( sb.String() );
-			
 			global_ListOfCategories.RemoveItem( i );
 			delete underTesting;
 			break;
