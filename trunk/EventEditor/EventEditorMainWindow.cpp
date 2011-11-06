@@ -264,6 +264,9 @@ void		EventEditorMainWindow::InitUI()
 	BRect individualTab = tabView->Bounds();
 	individualTab.bottom -= ( tabView->TabHeight() + 20 + menuBar->Bounds().Height() );
 	
+	// Enable firing the activity in any case
+	fData.SetEventActivityFired( false );
+	
 	// General view
 	genView = new EventEditor_GeneralView( individualTab, &fData );
 	if ( !genView || genView->InitCheck() != B_OK ) {		
@@ -394,6 +397,9 @@ void EventEditorMainWindow::MessageReceived( BMessage *in )
 			if ( remView ) remView->MessageReceived( &saveMessage );
 			if ( actView ) actView->SaveData();
 			if ( noteView ) noteView->SaveText();
+			
+			fData.SetEventActivityFired( false );
+			fData.SetReminderActivityFired( false );
 		
 				// If we have the reference to file...
 			if ( in->what == kFileSave ) {

@@ -190,8 +190,10 @@ void		EventEditor_ReminderView::MessageReceived( BMessage* in )
 			if ( tempBool ) {
 				fData->SetReminderOffset( 60 * ( 60 * fHours + fMinutes ),
 												  fHourMinControl->GetCheckBoxValue( NULL ) );
+				fData->SetReminderActivityFired( false );	// Enable activity start
 			} else {
 				fData->SetReminderOffset( 0, true );
+				fData->SetReminderActivityFired( true );	// Disable activity start
 			}
 			break;
 		
@@ -202,6 +204,7 @@ void		EventEditor_ReminderView::MessageReceived( BMessage* in )
 														NULL,
 														&tempBool );
 			fData->SetReminderOffset( 60 * ( 60 * fHours + fMinutes ), tempBool );
+			fData->SetReminderActivityFired( false );	// Enable activity start
 			break;
 		
 		case kSaveRequested:

@@ -17,7 +17,7 @@
 #include <Application.h>
 
 #include "PreferencesPrefletMainWindow.h"
-#include "globals.h"
+// #include "globals.h"
 #include "Utilities.h"
 
 /*!	\class		PreferencesPrefletApp

@@ -72,6 +72,8 @@ struct Category {
 
 extern BList global_ListOfCategories;	//!< List that holds all categories in the system.
 
+Category*	FindCategory( const BString& name );
+Category*	FindDefaultCategory();
 void	AddCategoryToGlobalList( const Category *toAdd );
 bool	MergeCategories( BString& source, BString& target );
 

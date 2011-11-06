@@ -745,7 +745,7 @@ void		EventEditor_GeneralView::MessageReceived( BMessage* in )
 			{
 				// Move end time along with the start time
 				fStartTime = tempRepresentation;
-				fData->SetStartDate( fStartTime );				
+				fData->SetStartTime( fStartTime );				
 				
 				fEndTime = endCM->FromTimeTToLocalCalendar( fDuration + startCM->FromLocalCalendarToTimeT( fStartTime ) );
 				
@@ -755,13 +755,13 @@ void		EventEditor_GeneralView::MessageReceived( BMessage* in )
 			// Event does not last whole days, but the change is legal
 			else if ( VerifyEndTimeIsGreaterThenStart( tempRepresentation, fEndTime, &fDuration ) ) {
 				fStartTime = tempRepresentation;
-				fData->SetStartDate( fStartTime );
+				fData->SetStartTime( fStartTime );
 				fDuration = endCM->FromLocalCalendarToTimeT( fEndTime ) - startCM->FromLocalCalendarToTimeT( fStartTime );
 				fData->SetDuration( fDuration );
 			// Event does not last whole days and the change is illegal
 			} else {
-				_StartDateControl->InitTimeRepresentation( fStartTime );
-				_StartDateControl->Invalidate();
+				_StartTimeHourMinControl->SetCurrentTime( fStartTime );
+				_StartTimeHourMinControl->Invalidate();
 			}
 			UpdateDurationLengthLabel();
 			

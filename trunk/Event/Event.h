@@ -107,11 +107,15 @@ protected:
 	// When this Event starts, for how long does it last and what does it do.	
 	TimeRepresentation	fStart;	//!< Start time of the first occurrence of the Event.
 	time_t				fDuration;	//!< Duration of the Event in seconds. May be 0.
+	uint32	fActivitySnoozedTime;	//!< For Snooze activity only. When the Activity is schedulled to start, from UNIX epoch.
+	bool		bEventActivityWasFired;	//!< \c true if Event's activity was fired.
 	ActivityData		fEventActivity;
 	
 	// When the Reminder starts, and what does it do.
 	ActivityData		fReminderActivity;		//!< Activity of the Reminder
+	bool		bReminderActivityWasFired;			//!< \c true if Reminder activity was fired
 	uint32	bReminderIsFiredBeforeEvent;		//!< \c true if Reminder starts before Event's start time.
+	uint32	fReminderSnoozedTime;				//!< For Snooze feature only. Seconds in UNIX time epoch until Reminder fires
 	time_t	fOffsetBetweenReminderAndEvent;	/*!< Difference in seconds between Reminder and Event.
 															 *   Offset of 0 means Reminder is disabled.		*/
 			
@@ -128,17 +132,23 @@ protected:
 	
 public:
 
-	/* Constructors and destructor */
+	/*!	\name		Constructors and destructor
+	 */
+	///@{
 	EventData( time_t in = 0 );	// Constructor from seconds
 	EventData( const entry_ref& fileIn );	// Constructor from file
 	virtual ~EventData();			// Destructor
+	///@}
 	
-	/* Work with filesystem */
+	/*!	\name		Work with filesystem
+	 */
+	///@{
 	virtual void 		InitFromFile( const entry_ref& fileIn );		// Read the object data from file
 	virtual status_t	SaveToFile( entry_ref* fileIn = NULL );
 	virtual status_t	SaveToFile( BFile* fileIn );
 	virtual void		Revert();
 	virtual entry_ref*	GetRef() { return fEventFile; }
+	///@}
 
 	/* Setting and getting Event general data */
 	virtual BString	GetCategory() const { return fCategory; }
@@ -155,13 +165,21 @@ public:
 	virtual status_t	SetEventName( const BString& toSet ) { fEventName.SetTo( toSet ); return B_OK; }
 	virtual status_t	SetEventName( const char* toSet ) { if ( toSet ) return SetEventName( BString( toSet ) ); return B_ERROR; }
 	
+	//!	\name		Where the event will occur?
+	///@{
 	virtual BString	GetEventLocation() const { return fLocation; }
 	virtual status_t	SetEventLocation( const BString& toSet ) { fLocation.SetTo( toSet ); }
 	virtual status_t	SetEventLocation( const char* toSet ) { if ( toSet ) fLocation.SetTo( toSet ); }
+	///@}
 	
+	//!	\name		File reference manipulations
+	///@{
 	virtual entry_ref*	GetFileRef() const { return fEventFile; }
 	virtual status_t		SetFileRef( const entry_ref& in ) { fEventFile = new entry_ref( in ); }
+	///@}
 	
+	//!	\name		Start date and time manipulations
+	///@{
 	virtual TimeRepresentation	GetStartTime() const { return fStart; }
 	virtual void		GetStartTime( int* hour, int* min ) const {
 		if ( hour ) *hour = fStart.tm_hour;
@@ -174,21 +192,51 @@ public:
 	}
 	virtual status_t	SetStartTime( const TimeRepresentation& trIn ) {
 		fStart = trIn;
-	}
-	
+	}	
 	virtual status_t	SetStartTime( int hour, int min );
 	virtual status_t	SetStartDate( int day, int month, int year, BString calendar = BString( "Gregorian" ) );
 	virtual status_t	SetStartDate( const TimeRepresentation& trIn ) {
 		return SetStartDate( trIn.tm_mday, trIn.tm_mon, trIn.tm_year, trIn.GetCalendarModule() );
 	}
+	///@}
 	
+	//!	\name		Duration getter and setter
+	///@{
 	virtual time_t		GetDuration() const { return fDuration; }
 	virtual status_t	SetDuration( time_t durIn, EventType* newType = NULL );
+	///@}
 	
-	// The following functions return pointers to the live data on purpose!
+	/*!	\name			Activity data access
+	 *		\attention	The following functions return pointers to
+	 *						the live data on purpose!
+	 */
+	///@{
 	virtual ActivityData*	GetEventActivity() { return &fEventActivity; }
 	virtual ActivityData*	GetReminderActivity() { return &fReminderActivity; }
 	
+	virtual	bool		WasEventActivityFired() const	{ return bEventActivityWasFired; }
+	virtual	void		SetEventActivityFired( bool toSet ) { bEventActivityWasFired = toSet; }
+	
+	virtual	bool		WasReminderActivityFired() const	{ return bReminderActivityWasFired; }
+	virtual	void		SetReminderActivityFired( bool toSet ) { bReminderActivityWasFired = toSet; }
+	
+	virtual uint32		GetReminderSnoozeTime() const { return fReminderSnoozedTime; }
+	virtual void		SetReminderSnoozeTime( uint32 toSet ) {
+		fReminderSnoozedTime = toSet;
+		bReminderActivityWasFired = false;
+	}
+	
+	virtual uint32		GetActivtiySnoozeTime() const { return fActivitySnoozedTime; }
+	virtual void		SetActivitySnoozeTime( uint32 toSet ) {
+		fActivitySnoozedTime = toSet;
+		bEventActivityWasFired = false;
+	}
+	///@}
+	
+	/*!	\name 		Get and set reminder offset.
+	 *		\details		If the reminder offset is 0, the reminder is totally disabled.
+	 */
+	///@{
 	virtual time_t		GetReminderOffset( bool* beforeEventOut ) {
 		if ( beforeEventOut ) { *beforeEventOut = ( bReminderIsFiredBeforeEvent != 0 ); }
 		return fOffsetBetweenReminderAndEvent;
@@ -197,20 +245,23 @@ public:
 		bReminderIsFiredBeforeEvent = ( beforeEvent ? 1 : 0 );
 		fOffsetBetweenReminderAndEvent = newOffset;
 	}
+	///@}
 	
 	virtual bool		GetLastsWholeDays() const { return ( bLastsWholeDays != 0 ); }
 	virtual void		SetLastsWholeDays( bool toSet ) { bLastsWholeDays = ( toSet ? 1 : 0 ); }
 	
-	/*!	\note
-	 *				Since Note may be quite long, I provide additional method that
-	 *				returning reference (and doesn't allocate another object).
+	/*!	\name			Note text manipulations.
+	 *		\note
+	 *				Since Note text may be quite long, I provide additional method
+	 *				that returns reference (and doesn't allocate another object).
 	 *				Hence this method is not \c const.
 	 */
+	///@{
 	virtual BString& 	GetNoteTextReference() { return fNote; }
 	virtual BString	GetNoteText() const { return fNote; }
 	virtual void		SetNoteText( const BString& toSet ) { fNote.SetTo( toSet ); }
 	virtual void 		SetNoteText( const char* toSet ) { if ( toSet ) fNote.SetTo( toSet ); }
-	
+	///@}
 	
 };	// <-- end of class EventData
 

@@ -96,6 +96,49 @@ void	AddCategoryToGlobalList( const Category *toAdd )
 
 
 
+/*!	\brief		Finds a Category
+ *		\details		Search the global list of categories for a category with given
+ *						name. If such category is found, a \b copy of it is made and
+ *						returned to the caller. Otherwise, \c NULL is returned.
+ *						If several categories with the same name exist, (which is
+ *						extremely unlikely), first is returned.
+ *		\attention	The caller is responsible for freeing the returned object.
+ *		\param[in]	name		Name of the category to search for.
+ */
+Category*		FindCategory( const BString& name )
+{
+	Category* toReturn = NULL;
+	Category*  toCheck = NULL;
+	
+	int i, limit = global_ListOfCategories.CountItems();
+	
+	for ( i = 0; i < limit; ++i ) {
+		toCheck = ( Category* )global_ListOfCategories.ItemAt( i );
+		if ( !toCheck ) { continue; }
+		
+		if ( name == toCheck->categoryName ) {
+			// Found the needed category
+			toReturn = new Category( toCheck );
+			break;	
+		}
+	}	// <-- end of pass on all categories in the global list
+	
+	return toReturn;
+}	// <-- end of function FindCategory
+
+
+
+/*!	\brief		Finds default category
+ *		\details		Calls FindCategory() with argument \c "Default". Returs
+ *						whatever value it gets. It may return \c NULL !
+ */
+Category*		FindDefaultCategory()
+{
+	return FindCategory( "Default" );
+}	// <-- end of function FindDefaultCategory
+
+
+
 /*!	\brief		MergeCategories
  *	\details	Move all items from one category to another.
  *	\param[in]	source		The source category
@@ -295,6 +338,9 @@ Category::Category( const Category* in )
 	{
 		this->categoryName.SetTo( in->categoryName ),
 		this->categoryColor = in->categoryColor;
+	} else {
+		this->categoryName.SetTo( "Default" );
+		this->categoryColor = ui_color( B_WINDOW_TAB_COLOR );
 	}
 }
 

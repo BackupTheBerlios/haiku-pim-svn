@@ -5,15 +5,21 @@
  
 // Project includes
 #include "ActivityData.h"
+#include "ActivityWindow.h"
 
 // OS includes
 #include <Alert.h>
+#include <Application.h>
 #include <Entry.h>
 #include <Errors.h>
+#include <Handler.h>
+#include <Looper.h>
+#include <Messenger.h>
 #include <Roster.h>
 
 // POSIX includes
 #include <string.h>
+#include <cstdlib>
 
 
 /*---------------------------------------------------------------------------
@@ -297,27 +303,55 @@ BString		ActivityData::VerifyCommandLineParameters( const char* in )
 
 /*!	\brief		Perform the desired activity
  *		\details		This function is the central function of the activity mechanism.
+ *						However, it does not display the notification message - mainly because
+ *						it has no idea about the Event it belongs to, therefore it doesn't know
+ *						the Event's name, category, and can't handle the "Snooze" message.
  *		\param[in]	in		Pointer to the \c Activity to be performed.
  */
 void			ActivityData::PerformActivity( ActivityData* in )
 {
 	if ( !in ) { return; }
 	
-	BString tempString;
+	BEntry		entry;
+	entry_ref	fileRef, appRef;
+	BPath			path;
+	BString		tempString, anotherTempString;
+	int			thread_id;
 	
-	// Display a notification
-	if ( in->GetNotification( &tempString ) ) {
-		BAlert* alert = new BAlert( "Eventual notification",
-											tempString.String(),
-											"Ok" );
-		if ( alert ) {
-			alert->Go();
+	// The notification will be displayed separately
+
+	// Run a program
+	if ( in->GetProgram( &path, &tempString ) )
+	{
+		entry.SetTo( path.Path(), true );		// Find the application to run
+		if ( ( entry.InitCheck() == B_OK )			&&		// The initialization passed
+		     ( entry.Exists() )							&&		// The entry exists
+		     ( entry.GetPath( &path ) == B_OK ) )			// Got path to file (which may be not what the user entered)		
+		{
+			entry.Unset();		// Don't need the entry anymore
+			anotherTempString.SetTo( path.Path() );
+			anotherTempString << ' ';
+			tempString.Prepend( anotherTempString );
+		
+				// Launch the program!	
+			thread_id = fork();
+			if ( thread_id == 0 ) {
+				system( tempString.String() );
+			}
 		}
 	}
 	
-	// Run a program
-	
 	// Play a sound file
-	
-	
+	if ( in->GetSound( &path ) ) {
+		entry.SetTo( path.Path(), true );		// Find the file to play
+		if ( ( entry.InitCheck() == B_OK ) 			&&		// The initialization passed
+			  ( entry.Exists() )							&&		// The file exists
+			  ( entry.GetRef( &fileRef ) == B_OK ) &&		// Got the reference to the file
+			  ( be_roster->Launch( &fileRef ) == B_OK ) )	// Launched the file!
+		{
+			entry.Unset();	// Close the file descriptor
+			// Launch was already performed
+		}
+	}
+
 }	// <-- end of function ActivityData::PerformActivity

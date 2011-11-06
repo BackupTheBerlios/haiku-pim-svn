@@ -28,7 +28,8 @@ SRCS= 	ActivityData.cpp	\
 			ActivityView.cpp	\
 			NotificationView.cpp	\
 			SoundSetupView.cpp	\
-			ProgramSetupView.cpp
+			ProgramSetupView.cpp	\
+			ActivityWindow.cpp
 		
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
@@ -65,7 +66,12 @@ SYSTEM_INCLUDE_PATHS =
 #	additional paths to look for local headers
 #	thes use the form: #include "header"
 #	source file directories are automatically included
-LOCAL_INCLUDE_PATHS = ../Utilities
+LOCAL_INCLUDE_PATHS = ../Utilities		\
+	../CategoryItem							\
+	../TimeRepresentation					\
+	../CalendarControl						\
+	../CalendarModule							\
+	../PreferencesClasses
 
 #	specify the level of optimization that you desire
 #	NONE, SOME, FULL

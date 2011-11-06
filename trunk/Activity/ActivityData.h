@@ -44,19 +44,27 @@ const uint32	kActivityData = 'ACTV';
 class ActivityData 
 {
 public:
+	//!	\name			Constructor and destructor
+	///@{
 	ActivityData( BMessage* in = NULL );
 	virtual	~ActivityData() {}	// No dynamically allocated data - no need in destructor
+	///@}
 
-	// Help and support functions
+	//!	\name			Help and support static functions
+	///@{
 	static BString	VerifyCommandLineParameters( const BString& in );
 	static BString	VerifyCommandLineParameters( const char* in );
 	static void		PerformActivity( ActivityData* in );
+	///@}
 
-	// Archive and unarchive functions
+	//!	\name			Archive and unarchive functions
+	///@{
 	virtual status_t	Archive( BMessage* out );
 	virtual void		Instantiate( BMessage* in = NULL );
+	///@}
 	
-	// Getters and setters for the Notification
+	//!	\name			Getters and setters for the Notification
+	///@{
 	inline virtual void	SetNotification( bool toSet ) { bNotification = toSet; }
 	inline virtual void	SetNotification( bool toSet, const BString& textIn ) {
 		bNotification = toSet;
@@ -69,8 +77,10 @@ public:
 		if ( textOut ) { textOut->SetTo( fNotificationText ); }
 		return bNotification;
 	}
+	///@}
 	
-	// Getters and setters for sound play
+	//!	\name			Getters and setters for sound play
+	///@{
 			 virtual void	SetSound( bool toSet ) { bSound = toSet; }
 	inline virtual void	SetSound( bool toSet, const BPath& pathIn ) {
 		bSound = toSet;
@@ -81,8 +91,10 @@ public:
 		if ( pathOut ) { pathOut->SetTo( fSoundFile.Path() ); }
 		return bSound;
 	}
-	
-	// Getters and setters for the program
+	///@}	
+
+	//!	\name 		Getters and setters for the program
+	///@{
 	inline virtual void	SetProgram( bool toSet ) { bProgramRun = toSet; }
 	inline virtual void	SetProgram( bool toSet, const BPath& pathIn ) {
 		bProgramRun = toSet; fProgramPath = pathIn;
@@ -103,8 +115,10 @@ public:
 	}
 	inline virtual void	SetProgramVerified( bool toSet ) { bVerifiedByUser = toSet; }
 	inline virtual bool 	GetProgramVerified( void ) const { return bVerifiedByUser; }
+	///@}
 	
-	// Getters and setters for Email
+	//!	\name	 Getters and setters for Email
+	///@{
 	inline virtual void	SetEmail( bool toSet ) { bEmailToSend = toSet; }
 	inline virtual void	SetEmailSubject( const BString& subjIn ) { fEmailSubject = subjIn; }
 	inline virtual void	SetEmailContents( const BString& contIn ) { fEmailContents = contIn; }
@@ -117,6 +131,7 @@ public:
 	inline virtual BString GetEmailAddress( int placeholder = 0 ) {
 		return BString( fEmailAddress[ placeholder ] );
 	}
+	///@}
 	
 protected:
 

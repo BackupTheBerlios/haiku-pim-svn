@@ -150,6 +150,9 @@ void 		EventData::_InitDefaults()
 	// Next occurrence is the start date.
 	fNextOccurrence = fCalModule->FromLocalCalendarToTimeT( fStart );
 	
+	fReminderSnoozedTime = 0;
+	fActivitySnoozedTime = 0;
+	
 	if ( !pref ) {
 		fDuration = 30 * 60;		// Default duration is 30 mins
 	} else {
@@ -166,7 +169,9 @@ void 		EventData::_InitDefaults()
 	
 	// Clear reminder activity and event activity
 	fEventActivity.Instantiate( NULL );
+	bEventActivityWasFired = false;
 	fReminderActivity.Instantiate( NULL );
+	bReminderActivityWasFired = false;
 
 	// Initializing the Note to nothing
 	fNote.SetTo( "" );
@@ -284,7 +289,6 @@ void		EventData::InitFromFile( const entry_ref& fileIn )
 		 */
 		if ( strcmp( nameBuffer, "EVNT:name" ) == 0 )
 		{
-			// It is the Event name
 			fEventName.SetTo( ( char* )buffer );
 			continue;
 		}
@@ -352,6 +356,11 @@ void		EventData::InitFromFile( const entry_ref& fileIn )
 			fEventActivity.Instantiate( &tempMessage );
 			continue;
 		}
+		else if ( strcmp( nameBuffer, "EVNT:activity_fired" ) == 0 )
+		{
+			bEventActivityWasFired = ( tempUint32 != 0 );
+			continue;
+		}
 		else if ( strcmp( nameBuffer, "EVNT:reminder_offset" ) == 0 )
 		{
 			fOffsetBetweenReminderAndEvent = ( time_t )abs( ( time_t )tempUint32 );
@@ -369,6 +378,11 @@ void		EventData::InitFromFile( const entry_ref& fileIn )
 			tempMessage.MakeEmpty();
 			tempMessage.Unflatten( ( char* )placeholder );
 			fReminderActivity.Instantiate( &tempMessage );
+			continue;
+		}
+		else if ( strcmp( nameBuffer, "EVNT:reminder_fired" ) == 0 )
+		{
+			bReminderActivityWasFired = ( tempUint32 != 0 );
 			continue;
 		}
 		else if ( strcmp( nameBuffer, "EVNT:cal_module" ) == 0 )
@@ -494,6 +508,7 @@ status_t		EventData::_SaveToFile( BFile* file )
 	if ( bLastsWholeDays ) {
 		toSave.tm_hour = toSave.tm_min = 0;
 	}
+	fCalModule = utl_FindCalendarModule( fStart->GetCalendarModule() );
 	toSave.Archive( &tempMessage );
 	size = tempMessage.FlattenedSize();
 	buffer = new uint8[ size ];
@@ -510,8 +525,12 @@ status_t		EventData::_SaveToFile( BFile* file )
 	fNextOccurrence = fCalModule->FromLocalCalendarToTimeT( toSave );
 	
 	// Next occurrence
-	file->WriteAttr( "EVNT:next_occurrence", 	B_UINT32_TYPE,	0, ( uint32* )&fNextOccurrence,	sizeof( uint32 ) );
-		
+	if ( fActivitySnoozedTime == 0 ) {
+		file->WriteAttr( "EVNT:next_occurrence", 	B_UINT32_TYPE,	0, ( uint32* )&fNextOccurrence,	sizeof( uint32 ) );
+	} else {
+		file->WriteAttr( "EVNT:next_occurrence", 	B_UINT32_TYPE,	0, ( uint32* )&fActivitySnoozedTime,	sizeof( uint32 ) );
+	}
+	
 	// Calculate next reminder
 	tempUint32 = ( uint32 )fNextOccurrence + ( bReminderIsFiredBeforeEvent ? ( -1 ) : 1 ) * ( uint32 )fOffsetBetweenReminderAndEvent;
 	
@@ -522,7 +541,16 @@ status_t		EventData::_SaveToFile( BFile* file )
 	file->WriteAttr( "EVNT:verified",			B_INT32_TYPE,	0, ( int32* )&tempBool,				sizeof( int32 ) );
 	file->WriteAttr( "EVNT:type",	 				B_INT32_TYPE,	0, ( int32* )&fEventType,			sizeof( int32 ) );
 	file->WriteAttr( "EVNT:reminder_offset",	B_UINT32_TYPE, 0, ( uint32* )&fOffsetBetweenReminderAndEvent, sizeof( uint32 ) );
-	file->WriteAttr( "EVNT:next_reminder",		B_UINT32_TYPE, 0, ( uint32* )&tempUint32, 		sizeof( uint32 ) );
+	
+	// Next time of the reminder invocation
+	// This value doesn't depend on the reminder being enabled or disabled; it's written anyway
+	if ( fReminderSnoozedTime != 0 ) {
+		// The reminder was snoozed - calculate new time based on snooze time
+		file->WriteAttr( "EVNT:next_reminder",		B_UINT32_TYPE, 0, ( uint32* )&fReminderSnoozedTime, sizeof( uint32 ) );
+	} else {
+		// Else, calculate time based on start time and offset
+		file->WriteAttr( "EVNT:next_reminder",		B_UINT32_TYPE, 0, ( uint32* )&tempUint32, sizeof( uint32 ) );
+	}
 	
 	// Duration
 	file->WriteAttr( "EVNT:duration", B_UINT32_TYPE,	0, ( uint32* )&fDuration, sizeof( uint32 ) );	
@@ -596,13 +624,26 @@ status_t		EventData::_SaveToFile( BFile* file )
 	
 	// Was activity fired? 
 	// If it's schedulled to occur in the past - don't set the flag.
-	tempBool = ( currentMoment > fCalModule->FromLocalCalendarToTimeT( toSave ) );
-	file->WriteAttr( "EVNT:activity_fired", B_INT32_TYPE, 0, &tempBool, sizeof( int32 ) );
+	if ( !bEventActivityWasFired && ( currentMoment > fNextOccurrence ) ) {
+		tempUint32 = 0;
+	}
+	else
+	{
+		tempUint32 = 1;
+	}
+	file->WriteAttr( "EVNT:activity_fired", B_INT32_TYPE, 0, &tempUint32, sizeof( uint32 ) );
 	
 	// Was reminder fired? 
 	// If it's schedulled to occur in the past - don't set the flag.
-	tempBool = ( currentMoment > ( fCalModule->FromLocalCalendarToTimeT( toSave ) + ( ( bReminderIsFiredBeforeEvent ? -1 : 1 ) * fOffsetBetweenReminderAndEvent ) ) );
-	file->WriteAttr( "EVNT:reminder_fired", B_INT32_TYPE, 0, &tempBool, sizeof( int32 ) );
+	if ( !bReminderActivityWasFired && ( currentMoment > fNextOccurrence + ( ( bReminderIsFiredBeforeEvent ? -1 : 1 ) * fOffsetBetweenReminderAndEvent ) ) ) {
+		tempUint32 = 0;
+	}
+	else
+	{
+		tempUint32 = 1;
+	}
+	// tempBool = ( !bReminderActivityWasFired ) && ( currentMoment > ( fCalModule->FromLocalCalendarToTimeT( toSave ) ) );
+	file->WriteAttr( "EVNT:reminder_fired", B_INT32_TYPE, 0, &tempUint32, sizeof( uint32 ) );
 
 	// Does the Event lasts full days?
 	file->WriteAttr( "EVNT:whole_day",		B_INT32_TYPE, 0, &bLastsWholeDays, sizeof( int32 ) );
